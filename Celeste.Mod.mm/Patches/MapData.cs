@@ -114,16 +114,32 @@ namespace Celeste {
         public extern LevelData orig_StartLevel();
         public new LevelData StartLevel() {
             MapMetaModeProperties meta = Meta;
-            if (meta != null) {
-                if (!string.IsNullOrEmpty(meta.StartLevel)) {
-                    LevelData level = Levels.FirstOrDefault(_ => _.Name == meta.StartLevel);
-                    if (level != null)
-                        return level;
-                }
+            LevelData level;
+            if (meta != null && !string.IsNullOrEmpty(meta.StartLevel)) {
+                level = Levels.FirstOrDefault(_ => _.Name == meta.StartLevel);
+                if (level != null)
+                    return level;
 
+                // instead of silently falling back to the default behavior, show a postcard that the starting room doesn't exist
+                patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnostartroom").Replace("((room))", meta.StartLevel);
+                Logger.Log(LogLevel.Error, "MapData", $"Starting room {meta.StartLevel} does not exist!");
+                return null;
             }
 
-            return orig_StartLevel() ?? Levels[0];
+            level = orig_StartLevel();
+            if (level != null)
+                return level;
+
+            Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0), falling back to the first room.");
+            level = Levels.Count > 0 ? Levels[0] : null;
+
+            if (level != null)
+                return level;
+
+            // instead of outright crashing, show an error that the map has no rooms
+            patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnorooms");
+            Logger.Log(LogLevel.Error, "MapData", "Current map has no rooms!");
+            return null;
         }
 
         [MonoModReplace]
