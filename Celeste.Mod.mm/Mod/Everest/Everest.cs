@@ -473,6 +473,15 @@ namespace Celeste.Mod {
             // Request the mod update list as well.
             ModUpdaterHelper.RunAsyncCheckForModUpdates(excludeBlacklist: true);
 
+            // Cleanup mod ALCs
+            EverestModuleAssemblyContext._AllContextsLock.EnterReadLock();
+            try {
+                foreach (EverestModuleAssemblyContext alc in EverestModuleAssemblyContext._AllContexts)
+                    alc.PostBootCleanup();
+            } finally {
+                EverestModuleAssemblyContext._AllContextsLock.ExitReadLock();
+            }
+
             DiscordSDK.LoadRichPresenceIcons();
         }
 
