@@ -120,10 +120,7 @@ namespace Celeste {
                 if (level != null)
                     return level;
 
-                // instead of silently falling back to the default behavior, show a postcard that the starting room doesn't exist
-                patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnostartroom").Replace("((room))", meta.StartLevel);
-                Logger.Log(LogLevel.Error, "MapData", $"Starting room {meta.StartLevel} does not exist!");
-                return null;
+                Logger.Log(LogLevel.Warn, "MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist!");
             }
 
             level = orig_StartLevel();
