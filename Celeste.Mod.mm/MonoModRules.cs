@@ -88,6 +88,11 @@ namespace MonoMod {
                     InitModRules(MonoModRule.Modder);
                     break;
             }
+
+            // Null out the rules module reference once we are done patching
+            // Note that MonoMod loads a separate copy of the rules type for each mod we patch (:catresort:)
+            // So this doesn't break anything, however it prevents leaking the rules module definition
+            MonoModRule.Modder.PostProcessors += () => RulesModule = null;
         }
 
         private static void InitCommonRules(MonoModder modder) {
