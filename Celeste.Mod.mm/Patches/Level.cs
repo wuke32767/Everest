@@ -245,6 +245,11 @@ namespace Celeste {
                 playerIntro = introType;
 
             try {
+                if (Session.Level == "") {
+                    patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnorooms");
+                    Logger.Log(LogLevel.Error, "MapData", "Current map has no rooms!");
+                    throw new NullReferenceException("Current map has no rooms.");
+                }
                 Logger.Log(LogLevel.Verbose, "LoadLevel", $"Loading room {Session.LevelData.Name} of {Session.Area.GetSID()}");
 
                 orig_LoadLevel(playerIntro, isFromLoader);

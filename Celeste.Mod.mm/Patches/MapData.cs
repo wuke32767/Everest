@@ -130,13 +130,7 @@ namespace Celeste {
             Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0), falling back to the first room.");
             level = Levels.Count > 0 ? Levels[0] : null;
 
-            if (level != null)
-                return level;
-
-            // instead of outright crashing, show an error that the map has no rooms
-            patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnorooms");
-            Logger.Log(LogLevel.Error, "MapData", "Current map has no rooms!");
-            return null;
+            return level;
         }
 
         [MonoModReplace]
