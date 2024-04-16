@@ -115,21 +115,24 @@ namespace Celeste {
         public new LevelData StartLevel() {
             MapMetaModeProperties meta = Meta;
             LevelData level;
-            if (meta != null && !string.IsNullOrEmpty(meta.StartLevel)) {
-                level = Levels.FirstOrDefault(_ => _.Name == meta.StartLevel);
+            if (!string.IsNullOrEmpty(meta?.StartLevel)) {
+                level = Levels.FirstOrDefault(lvl => lvl.Name == meta.StartLevel);
                 if (level != null)
                     return level;
 
-                Logger.Log(LogLevel.Warn, "MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist!");
+                Logger.Log(LogLevel.Warn, "MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist for map {((patch_AreaData) Data)?.SID}!");
             }
 
             level = orig_StartLevel();
             if (level != null)
                 return level;
 
-            Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0), falling back to the first room.");
-            level = Levels.Count > 0 ? Levels[0] : null;
+            Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0) in map {((patch_AreaData) Data)?.SID}, attempting fallback to the first room.");
+            level = Levels.FirstOrDefault();
 
+            if (level == null) {
+                Logger.Log(LogLevel.Warn, "MapData", $"Map {((patch_AreaData) Data)?.SID} has no rooms!");
+            }
             return level;
         }
 
