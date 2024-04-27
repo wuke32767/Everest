@@ -126,7 +126,7 @@ namespace Celeste.Mod {
         /// </summary>
         internal void RegisterMod() {
             Everest.InvalidateInstallationHash();
-            Hash = Everest.GetChecksum(this);
+            Hash ??= Everest.GetChecksum(this);
 
             // Audio banks are cached, and as such use the module's hash. We can only ingest those now.
             if (patch_Audio.AudioInitialized) {
