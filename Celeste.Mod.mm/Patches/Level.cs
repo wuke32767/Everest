@@ -268,6 +268,8 @@ namespace Celeste {
 
                     Pause();
                 }
+                
+                CameraUpwardMaxY = Camera.Y + 180f; // prevent badeline orb camera lock data persisting through screen transitions
             } catch (Exception e) {
                 if (patch_LevelEnter.ErrorMessage == null) {
                     if (e is ArgumentOutOfRangeException && e.MethodInStacktrace(typeof(Level), "get_DefaultSpawnPoint")) {
