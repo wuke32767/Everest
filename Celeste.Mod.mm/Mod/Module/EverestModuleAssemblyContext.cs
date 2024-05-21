@@ -520,7 +520,8 @@ namespace Celeste.Mod {
                     // We have to unzip the native libs into the cache
                     string cachePath = Path.Combine(Everest.Loader.PathCache, "unmanaged-libs", UnmanagedLibraryFolder, ModuleMeta.Name);
 
-                    string modHash = (ModuleMeta.Hash ?? ModuleMeta.Multimeta.First(meta => meta.Hash != null).Hash).ToHexadecimalString();
+                    string modHash = ModuleMeta.Hash.ToHexadecimalString();
+
                     if (Directory.Exists(cachePath) && (!File.Exists(cachePath + ".sum") || File.ReadAllText(cachePath + ".sum") != modHash))
                         Directory.Delete(cachePath, true);
 
