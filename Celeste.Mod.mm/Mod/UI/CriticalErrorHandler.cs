@@ -229,6 +229,20 @@ namespace Celeste.Mod.UI {
 
                 writer.WriteLine();
                 writer.WriteLine($"Crash Exception: {error}");
+                writer.WriteLine();
+                writer.WriteLine($"Crash HResult: {error.HResult}");
+                writer.WriteLine($"Inner exception (if any): {error.InnerException}");
+                writer.WriteLine();
+                
+                StackTrace trace = new(error, true);
+                StackFrame latestFrame = trace.GetFrame(0);
+                if (latestFrame != null) {
+                    writer.WriteLine($"Last stack trace: {latestFrame}");
+                    writer.WriteLine($"Trace IL offset: {latestFrame.GetILOffset()}");
+                    writer.WriteLine($"Trace native offset: {latestFrame.GetNativeOffset()}");
+                } else {
+                    writer.WriteLine("Couldn't fetch latest frame!");
+                }
             } catch (Exception ex) {
                 Logger.Log(LogLevel.Error, "crit-error-handler", "Error backing up log file:");
                 Logger.LogDetailed(ex, "crit-error-handler");
