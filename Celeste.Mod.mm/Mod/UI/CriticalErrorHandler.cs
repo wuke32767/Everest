@@ -722,8 +722,14 @@ namespace Celeste.Mod.UI {
 
             DrawLineWrap($"Error Details: {errorType}: {errorMessage}", 0.7f, Color.LightGray);
             textPos.X += 50;
-            string[] btLines = (errorStackTrace ?? string.Empty).Split('\n').Select(l => l.Trim()).Where(l => !l.StartsWith("at Hook<") && !l.StartsWith("at DMD<")).ToArray();
+            string[] btLines = (errorStackTrace ?? string.Empty)
+                .Split('\n')
+                .Select(l => l.Trim())
+                .ToArray();
             for (int i = 0; i < btLines.Length; i++) {
+                // Declutter the stack trace from MonoMod detours, additionally skip the check if it's the latest one,
+                // since that means the crash was in there
+                if (i != 0 && btLines[i].StartsWith("at Hook<")) continue;
                 DrawLineWrap(btLines[i], 0.4f, Color.Gray);
                 if (textPos.Y >= Celeste.TargetHeight * 0.9f && i+1 < btLines.Length) {
                     DrawLineWrap("...", 0.5f, Color.Gray);
