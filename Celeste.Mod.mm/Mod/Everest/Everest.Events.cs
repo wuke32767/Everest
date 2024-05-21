@@ -8,6 +8,10 @@ using _Level = Celeste.Level;
 using _OuiJournal = Celeste.OuiJournal;
 using _OuiMainMenu = Celeste.OuiMainMenu;
 using _Player = Celeste.Player;
+using _Seeker = Celeste.Seeker;
+using _AngryOshiro = Celeste.AngryOshiro;
+using _SubHudRenderer = Celeste.Mod.UI.SubHudRenderer;
+using Monocle;
 
 namespace Celeste.Mod {
     public static partial class Everest {
@@ -184,6 +188,22 @@ namespace Celeste.Mod {
                 public static event Action<_Player> OnDie;
                 internal static void Die(_Player player)
                     => OnDie?.Invoke(player);
+
+                public static event Action<_Player> OnRegisterStates;
+                internal static void RegisterStates(_Player player)
+                    => OnRegisterStates?.Invoke(player);
+            }
+
+            public static class Seeker {
+                public static event Action<_Seeker> OnRegisterStates;
+                internal static void RegisterStates(_Seeker seeker)
+                    => OnRegisterStates?.Invoke(seeker);
+            }
+
+            public static class AngryOshiro {
+                public static event Action<_AngryOshiro> OnRegisterStates;
+                internal static void RegisterStates(_AngryOshiro oshiro)
+                    => OnRegisterStates?.Invoke(oshiro);
             }
 
             public static class Input {
@@ -257,6 +277,31 @@ namespace Celeste.Mod {
                 public static event ParseCommandHandler OnParseCommand;
                 internal static object ParseCommand(string command)
                     => OnParseCommand?.InvokeWhileNull<object>(command);
+            }
+
+            public static class AssetReload {
+                public delegate void ReloadHandler(bool silent);
+                public static event ReloadHandler OnBeforeReload, OnAfterReload;
+                internal static void BeforeReload(bool silent)
+                    => OnBeforeReload?.Invoke(silent);
+                internal static void AfterReload(bool silent)
+                    => OnAfterReload?.Invoke(silent);
+
+                public delegate void ReloadLevelHandler(global::Celeste.Level level);
+                public static ReloadLevelHandler OnReloadLevel;
+                internal static void ReloadLevel(global::Celeste.Level level)
+                    => OnReloadLevel?.Invoke(level);
+
+                public static Action OnReloadAllMaps;
+                internal static void ReloadAllMaps()
+                    => OnReloadAllMaps?.Invoke();
+            }
+
+            public static class SubHudRenderer {
+                public delegate void BeforeRenderHandler(_SubHudRenderer renderer, Scene scene);
+                public static event BeforeRenderHandler OnBeforeRender;
+                internal static void BeforeRender(_SubHudRenderer renderer, Scene scene)
+                    => OnBeforeRender?.Invoke(renderer, scene);
             }
         }
     }

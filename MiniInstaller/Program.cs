@@ -65,6 +65,9 @@ namespace MiniInstaller {
                 return 1;
             }
 
+            // Set working directory
+            Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
+            
             // Handle creating backup symlinks after obtaining elevation
             if (args.Length > 0 && args[0] == $"{nameof(CreateBackupSymlinksWithElevation)}_PostElevationRequest") {
                 PathGame = args[1];
@@ -318,15 +321,33 @@ namespace MiniInstaller {
             //Create symlinks
             try {
                 CreateBackupSymlinks();
-            } catch (IOException e) {
-                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) || unchecked((uint) e.HResult) != 0x80070522U) // ERROR_PRIVILEGE_NOT_HELD
+            } catch (Exception e) {
+                if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                     throw;
+                }
 
-                LogLine("Failed to create backup symlinks - asking user if they want to retry with elevation");
+                const uint ERROR_ACCESS_DENIED = 0x80070005U;
+                const uint ERROR_PRIVILEGE_NOT_HELD = 0x80070522U;
 
-                // On Windows, offer to try again with elevation
-                if (!CreateBackupSymlinksWithElevation())
-                    throw;
+                const uint ERROR_INVALID_FUNCTION = 0x80070001U;
+
+                switch (unchecked((uint) e.HResult)) {
+                    case ERROR_ACCESS_DENIED or ERROR_PRIVILEGE_NOT_HELD:
+                        LogLine("Failed to create backup symlinks due to missing privilege or access denial - asking user if they want to retry with elevation");
+                        // On Windows, offer to try again with elevation
+                        if (!CreateBackupSymlinksWithElevation()) {
+                            throw;
+                        }
+                        break;
+                    case ERROR_INVALID_FUNCTION:
+                        LogLine("Failed to create backup symlinks due to invalid function - warning user");
+                        if (!WarnAboutBackupSymlinkFilesystem()) {
+                            throw;
+                        }
+                        break;
+                    default:
+                        throw;
+                }
             }
         }
 
@@ -334,12 +355,12 @@ namespace MiniInstaller {
         private static bool CreateBackupSymlinksWithElevation() {
             switch (
                 MessageBox(0, """
-                The installer requires administrator privileges to link the vanilla installation to the modded one. 
+                The installer requires administrator privileges during the first installation to link the vanilla installation to the modded one. 
                 This is required to share save data with the "restart into vanilla" feature.
                 If denied, installation will continue, but saves will NOT be shared between vanilla and Everest.
 
                 Proceed with administrator privileges?
-                """.Trim(), "Everest Installation Elevation Request", 0x00000003U | 0x00000030U | 0x00010000U) // MB_YESNOCANCEL | MB_ICONWARNING | MB_SETFOREGROUND
+                """.Trim(), "Everest Installation Elevation Request", 0x00000003U | 0x00000040U | 0x00010000U) // MB_YESNOCANCEL | MB_ICONINFORMATION | MB_SETFOREGROUND
             ) {
                 case 2: // IDCANCEL
                     LogLine("User cancelled installation - rethrowing original error");
@@ -350,14 +371,20 @@ namespace MiniInstaller {
                     //Create symlinks with elevation
                     retry:;
                     try {
-                        Process elevatedProc = Process.Start(new ProcessStartInfo() {
-                            FileName = "dotnet.exe",
+                        ProcessStartInfo startInfo = new ProcessStartInfo() {
+                            FileName = Environment.ProcessPath ?? throw new Exception("No process path available"),
                             Verb = "RunAs",
-                            UseShellExecute = true,
-                            Arguments = $"\"{Assembly.GetEntryAssembly().Location}\" {nameof(CreateBackupSymlinksWithElevation)}_PostElevationRequest \"{PathGame}\" \"{PathOrig}\""
-                        });
-                        elevatedProc.WaitForExit();
+                            UseShellExecute = true
+                        };
+                        foreach (string arg in Environment.GetCommandLineArgs()[1..])
+                            startInfo.ArgumentList.Add(arg);
 
+                        startInfo.ArgumentList.Add($"{nameof(CreateBackupSymlinksWithElevation)}_PostElevationRequest");
+                        startInfo.ArgumentList.Add(PathGame);
+                        startInfo.ArgumentList.Add(PathOrig);
+
+                        Process elevatedProc = Process.Start(startInfo);
+                        elevatedProc.WaitForExit();
                         if (elevatedProc.ExitCode == 0) {
                             LogLine("Succesfully created backup symlinks with elevation");
                             break;
@@ -403,6 +430,28 @@ namespace MiniInstaller {
                 case 0: throw new Win32Exception();
             }
 
+            return true;
+        }
+        
+        [SupportedOSPlatform("windows")]
+        private static bool WarnAboutBackupSymlinkFilesystem() {
+            switch (
+                MessageBox(0, """
+                The installer failed to link the vanilla installation to the modded one due to missing support by your filesystem.
+                Installation can continue, but saves will NOT be shared between vanilla and Everest.
+                To fix this issue, install vanilla Celeste on an NTFS partition (this generally means a hard drive/SSD instead of an SD card or flash drive) and repeat the installation there.
+                """.Trim(), "Everest Installation Filesystem Warning", 0x00000001U | 0x00000030U | 0x00010000U) // MB_OKCANCEL | MB_ICONWARNING | MB_SETFOREGROUND)
+            ) {
+                case 2: // IDCANCEL
+                    LogLine("User cancelled installation - rethrowing original error");
+                    return false;
+                case 1: // IDOK
+                    LogLine("Continuing installation on non-NTFS filesystem - running fallback logic");
+                    CreateBackupSymlinksFallback();
+                    break;
+                case 0:
+                    throw new Win32Exception();
+            }
             return true;
         }
 
@@ -474,6 +523,10 @@ namespace MiniInstaller {
                 LogLine("Moving files from update directory");
                 srcPath ??= PathUpdate;
                 dstPath ??= PathGame;
+
+                // Check if we have a new runtime (=there is a piton-runtime folder both in the game and the update directory)
+                if (Directory.Exists(Path.Combine(PathGame, "piton-runtime")) && Directory.Exists(Path.Combine(PathUpdate, "piton-runtime")))
+                    Directory.Delete(Path.Combine(PathGame, "piton-runtime"), true);
             }
 
             if (!Directory.Exists(dstPath))
@@ -528,6 +581,7 @@ namespace MiniInstaller {
                     libDstDir = Path.Combine(PathGame, "lib64-linux");
                     ParseMonoNativeLibConfig(Path.Combine(PathOrig, "Celeste.exe.config"), "linux", dllMap, "lib{0}.so");
                     ParseMonoNativeLibConfig(Path.Combine(PathOrig, "FNA.dll.config"), "linux", dllMap, "lib{0}.so");
+                    dllMap.Add("libSDL2_image-2.0.so.0", "libSDL2_image.so"); // Required by EverestSplash
                 } break;
                 case InstallPlatform.MacOS:{
                     // Setup MacOS native libs
@@ -535,6 +589,7 @@ namespace MiniInstaller {
                     libDstDir = Path.Combine(PathGame, "lib64-osx");
                     ParseMonoNativeLibConfig(Path.Combine(PathOrig, "Celeste.exe.config"), "osx", dllMap, "lib{0}.dylib");
                     ParseMonoNativeLibConfig(Path.Combine(PathOrig, "FNA.dll.config"), "osx", dllMap, "lib{0}.dylib");
+                    dllMap.Add("libSDL2_image-2.0.0.dylib", "libSDL2_image.dylib"); // Required by EverestSplash
                 } break;
                 default: return;
             }
@@ -588,6 +643,22 @@ namespace MiniInstaller {
 
             if (PathOSXExecDir != null && Path.Exists(Path.Combine(PathOSXExecDir, "osx")))
                 Directory.Delete(Path.Combine(PathOSXExecDir, "osx"), true);
+            
+            // Finally make EverestSplash executable
+            if (Platform is InstallPlatform.Linux or InstallPlatform.MacOS) {
+                string splashTarget = Platform switch {
+                    InstallPlatform.Linux => "EverestSplash-linux",
+                    InstallPlatform.MacOS => "EverestSplash-osx",
+                    _ => throw new InvalidOperationException(),
+                };
+                // Permission flags may get overwritten in the packaging process
+                Process chmodProc =
+                    Process.Start(new ProcessStartInfo("chmod", $"u+x \"EverestSplash/{splashTarget}\""));
+                chmodProc?.WaitForExit();
+                if (chmodProc?.ExitCode != 0)
+                    LogLine("Failed to set EverestSplash executable flag");
+            }
+
         }
 
         public static void CopyControllerDB() {
@@ -816,7 +887,7 @@ namespace MiniInstaller {
             File.Delete(Path.Combine(Path.GetDirectoryName(appExe), "monomachineconfig"));
             File.Delete(Path.Combine(Path.GetDirectoryName(appExe), "FNA.dll.config"));
 
-            string hostsDir = Path.Combine(PathGame, "apphosts");
+            string hostsDir = Path.Combine(PathGame, "piton-apphosts");
 
             switch (Platform) {
                 case InstallPlatform.Windows: {

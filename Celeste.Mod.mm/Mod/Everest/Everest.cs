@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -168,6 +169,21 @@ namespace Celeste.Mod {
             stream.Seek(pos, SeekOrigin.Begin);
             return hash;
         }
+        
+        /// <summary>
+        /// Determine if both checksum collections are equal.
+        /// </summary>
+        /// <param name="a">The first checksum array.</param>
+        /// <param name="b">The second checksum array.</param>
+        /// <returns>True if the contents of both arrays match, false otherwise.</returns>
+        public static bool ChecksumsEqual(string[] a, string[] b) {
+            if (a.Length != b.Length)
+                return false;
+            for (int i = 0; i < a.Length; i++)
+                if (a[i].Trim() != b[i].Trim())
+                    return false;
+            return true;
+        }
 
         private static byte[] _InstallationHash;
         public static byte[] InstallationHash {
@@ -268,6 +284,12 @@ namespace Celeste.Mod {
 
                 else if (arg == "--debugger")
                     Debugger.Launch();
+                    
+                else if (arg == "--debugger-attach") {
+                    Logger.Log(LogLevel.Info, "Everest", "Waiting for debugger to attach...");
+                    while (!Debugger.IsAttached) { }
+                    Logger.Log(LogLevel.Info, "Everest", "Debugger attached");
+                }
 
                 else if (arg == "--dump")
                     Content.DumpOnLoad = true;
@@ -423,33 +445,20 @@ namespace Celeste.Mod {
             STAThreadHelper.Instance = new STAThreadHelper(Celeste.Instance);
 
             // Register our core module and load any other modules.
-            new CoreModule().Register();
+            CoreModule core = new CoreModule();
+            core.Register();
+            Assembly asm = typeof(CoreModule).Assembly;
+            Type[] types = asm.GetTypesSafe();
+            Loader.ProcessAssembly(core.Metadata, asm, types);
+            core.Metadata.RegisterMod();
 
             // Note: Everest fulfills some mod dependencies by itself.
-            new NullModule(new EverestModuleMetadata() {
+            NullModule vanilla = new NullModule(new EverestModuleMetadata {
                 Name = "Celeste",
                 VersionString = $"{Celeste.Instance.Version.ToString()}-{(Flags.IsFNA ? "fna" : "xna")}"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "DialogCutscene",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "UpdateChecker",
-                VersionString = "1.0.2"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "InfiniteSaves",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "DebugRebind",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "RebindPeriod",
-                VersionString = "1.0.0"
-            }).Register();
+            });
+            vanilla.Register();
+            vanilla.Metadata.RegisterMod();
 
             LuaLoader.Initialize();
 
@@ -479,6 +488,15 @@ namespace Celeste.Mod {
             // Request the mod update list as well.
             ModUpdaterHelper.RunAsyncCheckForModUpdates(excludeBlacklist: true);
 
+            // Cleanup mod ALCs
+            EverestModuleAssemblyContext._AllContextsLock.EnterReadLock();
+            try {
+                foreach (EverestModuleAssemblyContext alc in EverestModuleAssemblyContext._AllContexts)
+                    alc.PostBootCleanup();
+            } finally {
+                EverestModuleAssemblyContext._AllContextsLock.ExitReadLock();
+            }
+
             DiscordSDK.LoadRichPresenceIcons();
         }
 
@@ -495,6 +513,8 @@ namespace Celeste.Mod {
                 ShareVanillaSaveFiles = vanillaSavesDir.Exists && vanillaSavesDir.LinkTarget != null;
             } else
                 ShareVanillaSaveFiles = true;
+
+            AutoSplitter.Init();
 
             // Add the previously created managers.
             Celeste.Instance.Components.Add(MainThreadHelper.Instance);
@@ -513,6 +533,7 @@ namespace Celeste.Mod {
         internal static void Shutdown() {
             DebugRC.Shutdown();
             TextInput.Shutdown();
+            AutoSplitter.Shutdown();
             Events.Celeste.Shutdown();
             LegacyMonoModCompatLayer.Uninitialize();
         }
@@ -534,215 +555,37 @@ namespace Celeste.Mod {
             lock (_Modules)
                 _Modules.Add(module);
 
-            LuaLoader.Precache(module.GetType().Assembly);
-
-            bool newStrawberriesRegistered = false;
-
-            foreach (Type type in module.GetType().Assembly.GetTypesSafe()) {
-                // Search for all entities marked with the CustomEntityAttribute.
-                foreach (CustomEntityAttribute attrib in type.GetCustomAttributes<CustomEntityAttribute>()) {
-                    foreach (string idFull in attrib.IDs) {
-                        string id;
-                        string genName;
-                        string[] split = idFull.Split('=');
-
-                        if (split.Length == 1) {
-                            id = split[0];
-                            genName = "Load";
-
-                        } else if (split.Length == 2) {
-                            id = split[0];
-                            genName = split[1];
-
-                        } else {
-                            Logger.Log(LogLevel.Warn, "core", $"Invalid number of custom entity ID elements: {idFull} ({type.FullName})");
-                            continue;
-                        }
-
-                        id = id.Trim();
-                        genName = genName.Trim();
-
-                        patch_Level.EntityLoader loader = null;
-
-                        ConstructorInfo ctor;
-                        MethodInfo gen;
-
-                        gen = type.GetMethod(genName, new Type[] { typeof(Level), typeof(LevelData), typeof(Vector2), typeof(EntityData) });
-                        if (gen != null && gen.IsStatic && gen.ReturnType.IsCompatible(typeof(Entity))) {
-                            loader = (level, levelData, offset, entityData) => (Entity) gen.Invoke(null, new object[] { level, levelData, offset, entityData });
-                            goto RegisterEntityLoader;
-                        }
-
-                        ctor = type.GetConstructor(new Type[] { typeof(EntityData), typeof(Vector2), typeof(EntityID) });
-                        if (ctor != null) {
-                            loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(new object[] { entityData, offset, new EntityID(levelData.Name, entityData.ID) });
-                            goto RegisterEntityLoader;
-                        }
-
-                        ctor = type.GetConstructor(new Type[] { typeof(EntityData), typeof(Vector2) });
-                        if (ctor != null) {
-                            loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(new object[] { entityData, offset });
-                            goto RegisterEntityLoader;
-                        }
-
-                        ctor = type.GetConstructor(new Type[] { typeof(Vector2) });
-                        if (ctor != null) {
-                            loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(new object[] { offset });
-                            goto RegisterEntityLoader;
-                        }
-
-                        ctor = type.GetConstructor(Type.EmptyTypes);
-                        if (ctor != null) {
-                            loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(null);
-                            goto RegisterEntityLoader;
-                        }
-
-                        RegisterEntityLoader:
-                        if (loader == null) {
-                            Logger.Log(LogLevel.Warn, "core", $"Found custom entity without suitable constructor / {genName}(Level, LevelData, Vector2, EntityData): {id} ({type.FullName})");
-                            continue;
-                        }
-                        patch_Level.EntityLoaders[id] = loader;
-                    }
-                }
-                // Register with the StrawberryRegistry all entities marked with RegisterStrawberryAttribute.
-                foreach (RegisterStrawberryAttribute attrib in type.GetCustomAttributes<RegisterStrawberryAttribute>()) {
-                    List<string> names = new List<string>();
-                    foreach (CustomEntityAttribute nameAttrib in type.GetCustomAttributes<CustomEntityAttribute>())
-                        foreach (string idFull in nameAttrib.IDs) {
-                            string[] split = idFull.Split('=');
-                            if (split.Length == 0) {
-                                Logger.Log(LogLevel.Warn, "core", $"Invalid number of custom entity ID elements: {idFull} ({type.FullName})");
-                                continue;
-                            }
-                            names.Add(split[0]);
-                        }
-                    if (names.Count == 0)
-                        goto NoDefinedBerryNames; // no customnames? skip out on registering berry
-
-                    foreach (string name in names) {
-                        StrawberryRegistry.Register(type, name, attrib.isTracked, attrib.blocksNormalCollection);
-                        newStrawberriesRegistered = true;
-                    }
-                }
-                NoDefinedBerryNames:
-                ;
-
-                // Search for all Entities marked with the CustomEventAttribute.
-                foreach (CustomEventAttribute attrib in type.GetCustomAttributes<CustomEventAttribute>()) {
-                    foreach (string idFull in attrib.IDs) {
-                        string id;
-                        string genName;
-                        string[] split = idFull.Split('=');
-
-                        if (split.Length == 1) {
-                            id = split[0];
-                            genName = "Load";
-
-                        } else if (split.Length == 2) {
-                            id = split[0];
-                            genName = split[1];
-
-                        } else {
-                            Logger.Log(LogLevel.Warn, "core", $"Invalid number of custom cutscene ID elements: {idFull} ({type.FullName})");
-                            continue;
-                        }
-
-                        id = id.Trim();
-                        genName = genName.Trim();
-
-                        patch_EventTrigger.CutsceneLoader loader = null;
-
-                        ConstructorInfo ctor;
-                        MethodInfo gen;
-
-                        gen = type.GetMethod(genName, new Type[] { typeof(EventTrigger), typeof(Player), typeof(string) });
-                        if (gen != null && gen.IsStatic && gen.ReturnType.IsCompatible(typeof(Entity))) {
-                            loader = (trigger, player, eventID) => (Entity) gen.Invoke(null, new object[] { trigger, player, eventID });
-                            goto RegisterCutsceneLoader;
-                        }
-
-                        ctor = type.GetConstructor(new Type[] { typeof(EventTrigger), typeof(Player), typeof(string) });
-                        if (ctor != null) {
-                            loader = (trigger, player, eventID) => (Entity) ctor.Invoke(new object[] { trigger, player, eventID });
-                            goto RegisterCutsceneLoader;
-                        }
-
-                        ctor = type.GetConstructor(Type.EmptyTypes);
-                        if (ctor != null) {
-                            loader = (trigger, player, eventID) => (Entity) ctor.Invoke(null);
-                            goto RegisterCutsceneLoader;
-                        }
-
-                        RegisterCutsceneLoader:
-                        if (loader == null) {
-                            Logger.Log(LogLevel.Warn, "core", $"Found custom cutscene without suitable constructor / {genName}(EventTrigger, Player, string): {id} ({type.FullName})");
-                            continue;
-                        }
-                        patch_EventTrigger.CutsceneLoaders[id] = loader;
-                    }
-                }
-
-                // Search for all Backdrops marked with the CustomBackdropAttribute.
-                foreach (CustomBackdropAttribute attrib in type.GetCustomAttributes<CustomBackdropAttribute>()) {
-                    foreach (string idFull in attrib.IDs) {
-                        string id;
-                        string genName;
-                        string[] split = idFull.Split('=');
-
-                        if (split.Length == 1) {
-                            id = split[0];
-                            genName = "Load";
-                        } else if (split.Length == 2) {
-                            id = split[0];
-                            genName = split[1];
-                        } else {
-                            Logger.Log(LogLevel.Warn, "core", $"Invalid number of custom backdrop ID elements: {idFull} ({type.FullName})");
-                            continue;
-                        }
-
-                        id = id.Trim();
-                        genName = genName.Trim();
-
-                        patch_MapData.BackdropLoader loader = null;
-
-                        ConstructorInfo ctor;
-                        MethodInfo gen;
-
-                        gen = type.GetMethod(genName, new Type[] { typeof(BinaryPacker.Element) });
-                        if (gen != null && gen.IsStatic && gen.ReturnType.IsCompatible(typeof(Backdrop))) {
-                            loader = data => (Backdrop) gen.Invoke(null, new object[] { data });
-                            goto RegisterBackdropLoader;
-                        }
-
-                        ctor = type.GetConstructor(new Type[] { typeof(BinaryPacker.Element) });
-                        if (ctor != null) {
-                            loader = data => (Backdrop) ctor.Invoke(new object[] { data });
-                            goto RegisterBackdropLoader;
-                        }
-
-                        RegisterBackdropLoader:
-                        if (loader == null) {
-                            Logger.Log(LogLevel.Warn, "core", $"Found custom backdrop without suitable constructor / {genName}(BinaryPacker.Element): {id} ({type.FullName})");
-                            continue;
-                        }
-                        patch_MapData.BackdropLoaders[id] = loader;
-                    }
-                }
-            }
-
             module.LoadSettings();
             module.Load();
             if (_ContentLoaded) {
                 module.LoadContent(true);
             }
             if (_Initialized) {
-                Tracker.Initialize();
-                module.Initialize();
-                Input.Initialize();
-                ((Monocle.patch_Commands) Engine.Commands).ReloadCommandsList();
+                if (_ModInitBatch != null)
+                    _ModInitBatch.LateInitializeModule(module);
+                else
+                    LateInitializeModules(Enumerable.Repeat(module, 1));
+            }
 
-                if (SaveData.Instance != null) {
+            module.LogRegistration();
+            Events.Everest.RegisterModule(module);
+        }
+
+        internal static void LateInitializeModules(IEnumerable<EverestModule> modules) {
+            // Re-initialize the tracker
+            Tracker.Initialize();
+
+            // Initialize mods
+            foreach (EverestModule module in modules)
+                module.Initialize();
+
+            // Re-initialize inputs + reload commands
+            Input.Initialize();
+            ((Monocle.patch_Commands) Engine.Commands).ReloadCommandsList();
+
+            // If we are in a save, load save data
+            if (SaveData.Instance != null) {
+                foreach (EverestModule module in modules) {
                     // we are in a save. we are expecting the save data to already be loaded at this point
                     Logger.Log(LogLevel.Verbose, "core", $"Loading save data slot {SaveData.Instance.FileSlot} for {module.Metadata}");
                     if (module.SaveDataAsync) {
@@ -765,44 +608,84 @@ namespace Celeste.Mod {
                         }
                     }
                 }
+            }
 
-                // Check if the module defines a PrepareMapDataProcessors method. If this is the case, we want to reload maps so that they are applied.
-                // We should also run the map data processors again if new berry types are registered, so that CoreMapDataProcessor assigns them checkpoint IDs and orders.
-                if (newStrawberriesRegistered || module.GetType().GetMethod("PrepareMapDataProcessors", new Type[] { typeof(MapDataFixup) })?.DeclaringType == module.GetType()) {
-                    Logger.Log(LogLevel.Verbose, "core", $"Module {module.Metadata} has custom strawberries or map data processors: reloading maps.");
+            // Check if any module defines a PrepareMapDataProcessors method. If this is the case, we want to reload maps so that they are applied.
+            foreach (EverestModule module in modules) {
+                if (module.GetType().GetMethod("PrepareMapDataProcessors", new Type[] { typeof(MapDataFixup) })?.DeclaringType == module.GetType()) {
+                    Logger.Log(LogLevel.Verbose, "core", $"Module {module.Metadata} has map data processors: reloading maps.");
+                    TriggerModInitMapReload();
+                    break;
+                }
+            }
+        }
+
+        [ThreadStatic]
+        private static ModInitializationBatch _ModInitBatch;
+
+        internal class ModInitializationBatch : IDisposable {
+            public bool IsActive { get; private set; }
+
+            private bool shouldReloadMaps = false;
+            private Queue<EverestModule> lateModuleInitQueue = new Queue<EverestModule>();
+
+            public ModInitializationBatch() {
+                if (_ModInitBatch != null)
+                    return;
+
+                IsActive = true;
+                _ModInitBatch = this;
+            }
+
+            public void Dispose() {
+                if (!IsActive)
+                    return;
+                Trace.Assert(_ModInitBatch == this);
+
+                // Flush the batch
+                Flush();
+
+                // Reset the mod init batch
+                _ModInitBatch = null;
+                IsActive = false;
+            }
+
+            public void ReloadMaps() {
+                if (!IsActive)
+                    throw new InvalidOperationException("Can't add tasks to an inactive mod initialization batch");
+                shouldReloadMaps = true;
+            }
+
+            public void LateInitializeModule(EverestModule module) {
+                if (!IsActive)
+                    throw new InvalidOperationException("Can't add tasks to an inactive mod initialization batch");
+                lateModuleInitQueue.Enqueue(module);
+            }
+
+            public void Flush() {
+                if (!IsActive)
+                    return;
+
+                // Flush the module late-initialization queue
+                // This might set shouldReloadMaps
+                if (lateModuleInitQueue.Count > 0) {
+                    LateInitializeModules(lateModuleInitQueue);
+                    lateModuleInitQueue.Clear();
+                }
+
+                // Reload maps if we should
+                if (shouldReloadMaps) {
                     AssetReloadHelper.ReloadAllMaps();
+                    shouldReloadMaps = false;
                 }
             }
+        }
 
-            if (Engine.Instance != null && Engine.Scene is Overworld overworld) {
-                // we already are in the overworld. Register new Ouis real quick!
-                Type[] types = FakeAssembly.GetFakeEntryAssembly().GetTypesSafe();
-                foreach (Type type in types) {
-                    if (typeof(Oui).IsAssignableFrom(type) && !type.IsAbstract && !overworld.UIs.Any(ui => ui.GetType() == type)) {
-                        Logger.Log(LogLevel.Verbose, "core", $"Instantiating UI from {module.Metadata}: {type.FullName}");
-
-                        Oui oui = (Oui) Activator.CreateInstance(type);
-                        oui.Visible = false;
-                        overworld.Add(oui);
-                        overworld.UIs.Add(oui);
-                    }
-                }
-            }
-
-            InvalidateInstallationHash();
-
-            EverestModuleMetadata meta = module.Metadata;
-            meta.Hash = GetChecksum(meta);
-
-            // Audio banks are cached, and as such use the module's hash. We can only ingest those now.
-            if (patch_Audio.AudioInitialized) {
-                patch_Audio.IngestNewBanks();
-            }
-
-            Logger.Log(LogLevel.Info, "core", $"Module {module.Metadata} registered.");
-            Events.Everest.RegisterModule(module);
-
-            CheckDependenciesOfDelayedMods();
+        internal static void TriggerModInitMapReload() {
+            if (_ModInitBatch != null)
+                _ModInitBatch.ReloadMaps();
+            else
+                AssetReloadHelper.ReloadAllMaps();
         }
 
         internal static void CheckDependenciesOfDelayedMods() {
@@ -827,7 +710,8 @@ namespace Celeste.Mod {
                                 } else {
                                     // all dependencies are loaded, all optional dependencies are either loaded or won't load => we're good to go!
                                     Logger.Log(LogLevel.Info, "core", $"Dependencies of mod {entry.Item1} are now satisfied: loading");
-
+                                    EverestSplashHandler.IncreaseLoadedModCount(entry.Item1.Name); // Notify the splash
+                                    
                                     if (Everest.Modules.Any(mod => mod.Metadata.Name == entry.Item1.Name)) {
                                         // a duplicate of the mod was loaded while it was sitting in the delayed list.
                                         Logger.Log(LogLevel.Warn, "core", $"Mod {entry.Item1.Name} already loaded!");
@@ -911,7 +795,7 @@ namespace Celeste.Mod {
 
             InvalidateInstallationHash();
 
-            Logger.Log(LogLevel.Info, "core", $"Module {module.Metadata} unregistered.");
+            module.LogUnregistration();
         }
 
         /// <summary>

@@ -27,6 +27,8 @@ namespace Celeste {
         // We're effectively in Celeste, but still need to "expose" private fields to our mod.
         private bool firstLoad;
 
+        
+
         [PatchCelesteMain]
         public static extern void orig_Main(string[] args);
         [MonoModPublic]
@@ -182,6 +184,18 @@ namespace Celeste {
         private static void MainInner(string[] args) {
             AppDomain.CurrentDomain.UnhandledException += UnhandledExceptionHandler;
 
+            // Get the splash up and running asap
+            if (!args.Contains("--disable-splash") && File.Exists(Path.Combine(".", "EverestSplash", "EverestSplash.dll"))) {
+                string targetRenderer = "";
+                for (int i = 0; i < args.Length; i++) { // The splash will use the same renderer as fna
+                    if (args[i] == "--graphics" && args.Length > i + 1) {
+                        targetRenderer = args[i + 1];
+                    }
+                }
+
+                EverestSplashHandler.RunSplash(targetRenderer);
+            }
+
             try {
                 Everest.ParseArgs(args);
                 ParseFNAArgs(args);
@@ -235,8 +249,14 @@ namespace Celeste {
         public static void CriticalFailureHandler(Exception e) {
             Everest.LogDetours();
 
-            (e ?? new Exception("Unknown exception")).LogDetailed("CRITICAL");
+            e ??= new Exception("Unknown exception");
 
+            e.LogDetailed("CRITICAL");
+
+            // here (ever) rests a tribute to everest in your everest
+            // 2020/02/24 - 2024/03/12
+
+            /*
             ErrorLog.Write(
 @"Yo, I heard you like Everest so I put Everest in your Everest so you can Ever Rest while you Ever Rest.
 
@@ -245,7 +265,9 @@ In other words: Celeste has encountered a catastrophic failure.
 IF YOU WANT TO HELP US FIX THIS:
 Please join the Celeste Discord server and drag and drop your log.txt into #modding_help.
 https://discord.gg/6qjaePQ");
+            */
 
+            ErrorLog.Write(e);
             ErrorLog.Open();
             if (!_CriticalFailureIsUnhandledException)
                 Environment.Exit(-1);
@@ -332,6 +354,12 @@ https://discord.gg/6qjaePQ");
             patch_VirtualTexture.StopFastTextureLoading();
 
             Everest._ContentLoaded = true;
+        }
+
+        protected override void BeginRun() {
+            base.BeginRun();
+            // This is as close as we can get to the showwindow call
+            EverestSplashHandler.StopSplash();
         }
 
         protected override void OnExiting(object sender, EventArgs args) {

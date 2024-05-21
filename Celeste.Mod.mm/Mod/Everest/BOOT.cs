@@ -6,6 +6,7 @@ using Steamworks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -39,23 +40,54 @@ namespace Celeste.Mod {
                 if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                     Environment.CurrentDirectory = Path.GetDirectoryName(everestPath);
 
+                // Required for native libs to be properly picked up
+                SetupNativeLibPaths();
+
                 try {
                     if (RestartViaLauncher())
                         return;
                 } catch {
                 }
 
+                // SELinux can cause weird game corruption-like symptoms when we lack the execheap permission
+                // So probe for it before continuing to boot on Linux
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                    [DllImport("libc", SetLastError = true)]
+                    static extern int mprotect(IntPtr ptr, nuint len, int prot);
+                    const int PROT_READ = 1, PROT_WRITE = 2, PROT_EXEC = 4;
+
+                    //Allocate a bit of memory on the heap
+                    IntPtr heapAlloc = Marshal.AllocHGlobal(123);
+                    IntPtr heapPage = heapAlloc & ~0xfff;
+
+                    //Try to make it executable
+                    if (mprotect(heapPage, 0x1000, PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
+                        throw new Win32Exception(Marshal.GetLastPInvokeError(), "SELinux execheap probe failed! Please ensure Everest has this permission, then try again");
+
+                    //Cleanup
+                    if (mprotect(heapPage, 0x1000, PROT_READ | PROT_WRITE) < 0)
+                        throw new Win32Exception(Marshal.GetLastPInvokeError(), "Failed to revert memory permissions after SELinux execheap probe");
+
+                    Marshal.FreeHGlobal(heapAlloc);
+                }
+
                 // Load the compatibility mode setting
                 Everest.CompatibilityMode = Everest.CompatMode.None;
+                bool useExclusiveFullscreen = false;
                 try {
                     string path = patch_UserIO.GetSaveFilePath("modsettings-Everest");
                     if (File.Exists(path)) {
                         using Stream stream = File.OpenRead(path);
                         using StreamReader reader = new StreamReader(stream);
                         Dictionary<object, object> settings = new Deserializer().Deserialize<Dictionary<object, object>>(reader);
-                        if (settings.TryGetValue(nameof(CoreModuleSettings.CompatibilityMode), out object val)) {
-                            Everest.CompatibilityMode = Enum.Parse<Everest.CompatMode>((string) val);
-                            Console.WriteLine($"Loaded compatibility mode setting: {Everest.CompatibilityMode}");
+
+                        if (settings != null) {
+                            if (settings.TryGetValue(nameof(CoreModuleSettings.CompatibilityMode), out object val)) {
+                                Everest.CompatibilityMode = Enum.Parse<Everest.CompatMode>((string) val);
+                                Console.WriteLine($"Loaded compatibility mode setting: {Everest.CompatibilityMode}");
+                            }
+                            if (settings.TryGetValue(nameof(CoreModuleSettings.D3D11UseExclusiveFullscreen), out val))
+                                useExclusiveFullscreen = bool.Parse((string) val);
                         }
                     }
                 } catch (Exception ex) {
@@ -63,22 +95,23 @@ namespace Celeste.Mod {
                     goto Exit;
                 }
 
-                // Handle the legacy FNA compatibility mode here, so that vanilla is also affected
+                // Handle the compatibility modes here, so that vanilla is also affected
                 if (Everest.CompatibilityMode == Everest.CompatMode.LegacyFNA) {
-                    Environment.SetEnvironmentVariable("FNA3D_D3D11_NO_FLIP_MODEL", "1");
+                    Environment.SetEnvironmentVariable("FNA3D_D3D11_FORCE_BITBLT", "1");
                     Environment.SetEnvironmentVariable("FNA3D_D3D11_NO_EXCLUSIVE_FULLSCREEN", "1");
-                }
+                } else if(!useExclusiveFullscreen)
+                    Environment.SetEnvironmentVariable("FNA3D_D3D11_NO_EXCLUSIVE_FULLSCREEN", "1");
+
+                if (useExclusiveFullscreen)
+                    Console.WriteLine("Enabling D3D11 exclusive fullscreen support");
 
                 // Start vanilla if instructed to
                 string vanillaDummy = Path.Combine(Path.GetDirectoryName(everestPath), "nextLaunchIsVanilla.txt");
-                if (File.Exists(vanillaDummy) || args.FirstOrDefault() == "--vanilla") {
+                if (File.Exists(vanillaDummy) || args.Contains("--vanilla")) {
                     File.Delete(vanillaDummy);
                     StartVanilla();
                     goto Exit;
                 }
-
-                // Required for native libs to be picked up on Linux / MacOS
-                SetupNativeLibPaths();
 
                 patch_Celeste.Main(args);
 

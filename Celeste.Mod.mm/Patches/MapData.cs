@@ -114,16 +114,26 @@ namespace Celeste {
         public extern LevelData orig_StartLevel();
         public new LevelData StartLevel() {
             MapMetaModeProperties meta = Meta;
-            if (meta != null) {
-                if (!string.IsNullOrEmpty(meta.StartLevel)) {
-                    LevelData level = Levels.FirstOrDefault(_ => _.Name == meta.StartLevel);
-                    if (level != null)
-                        return level;
-                }
+            LevelData level;
+            if (!string.IsNullOrEmpty(meta?.StartLevel)) {
+                level = Levels.FirstOrDefault(lvl => lvl.Name == meta.StartLevel);
+                if (level != null)
+                    return level;
 
+                Logger.Log(LogLevel.Warn, "MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist for map {((patch_AreaData) Data)?.SID}!");
             }
 
-            return orig_StartLevel() ?? Levels[0];
+            level = orig_StartLevel();
+            if (level != null)
+                return level;
+
+            Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0) in map {((patch_AreaData) Data)?.SID}, attempting fallback to the first room.");
+            level = Levels.FirstOrDefault();
+
+            if (level == null) {
+                Logger.Log(LogLevel.Warn, "MapData", $"Map {((patch_AreaData) Data)?.SID} has no rooms!");
+            }
+            return level;
         }
 
         [MonoModReplace]
@@ -148,7 +158,7 @@ namespace Celeste {
                 if (!levelsByName.ContainsKey(level.Name)) {
                     levelsByName.Add(level.Name, level);
                 } else {
-                    Logger.Log(LogLevel.Warn, "MapData", $"Failed to load duplicate room name {level.Name}");
+                    Logger.Log(LogLevel.Warn, "MapData", $"Failed to load duplicate room name {level.Name} in map {((patch_AreaData) Data)?.SID}");
                 }
             }
         }

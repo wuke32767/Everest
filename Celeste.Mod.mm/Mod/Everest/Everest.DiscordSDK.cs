@@ -122,12 +122,8 @@ namespace Celeste.Mod {
                 try {
                     DiscordInstance.RunCallbacks();
                 } catch (Discord.ResultException e) {
-                    if (e.Message == nameof(Discord.Result.NotRunning)) {
-                        Logger.Log(LogLevel.Warn, "discord-game-sdk", "Discord was shut down! Disposing Game SDK.");
-                        Dispose();
-                    } else {
-                        throw e;
-                    }
+                    Logger.Log(LogLevel.Warn, "discord-game-sdk", $"Failed to run Discord callbacks ({e.Message})! Disposing Game SDK.");
+                    Dispose();
                 }
             }
 
@@ -188,7 +184,7 @@ namespace Celeste.Mod {
                             icon = GetMapIconURLCached(area);
                         }
 
-                        if (CoreModule.Settings.DiscordShowSide && area.Mode.Length >= 2 && area.Mode[2] != null) {
+                        if (CoreModule.Settings.DiscordShowSide && area.Mode.Length >= 2 && area.Mode[1] != null) {
                             side = " | " + (char) ('A' + session.Area.Mode) + "-Side";
                         }
 

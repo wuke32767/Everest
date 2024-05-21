@@ -240,6 +240,12 @@ namespace Celeste.Mod.Core {
 
         public Everest.CompatMode CompatibilityMode { get; set; } = Everest.CompatMode.None; // TODO Better default logic
 
+        [SettingNeedsRelaunch]
+        [SettingName("MODOPTIONS_COREMODULE_D3D11EXCLUSIVEFULLSCREEN")]
+        [SettingSubText("MODOPTIONS_COREMODULE_D3D11EXCLUSIVEFULLSCREEN_DESC")]
+        [SettingInGame(false)]
+        public bool D3D11UseExclusiveFullscreen { get; set; }
+
         [SettingInGame(false)]
         public bool UseKeyboardForTextInput { get; set; } = true;
 
@@ -312,8 +318,13 @@ namespace Celeste.Mod.Core {
             set => _CurrentBranch = value is "dev" or "beta" or "stable" ? "updater_src_" + value : value; // branch names were changed at some point
         }
 
+        private Dictionary<string, LogLevel> _LogLevels = new Dictionary<string, LogLevel>();
+
         [SettingIgnore]
-        public Dictionary<string, LogLevel> LogLevels { get; set; } = new Dictionary<string, LogLevel>();
+        public Dictionary<string, LogLevel> LogLevels {
+            get => _LogLevels;
+            set => _LogLevels = value ?? new Dictionary<string, LogLevel>();
+        }
 
         [SettingSubHeader("MODOPTIONS_COREMODULE_MENUNAV_SUBHEADER")]
         [SettingInGame(false)]
@@ -323,6 +334,10 @@ namespace Celeste.Mod.Core {
         public ButtonBinding MenuPageDown { get; set; }
 
         [SettingSubHeader("MODOPTIONS_COREMODULE_DEBUGMODE_SUBHEADER")]
+        [SettingInGame(false)]
+        [DefaultButtonBinding(0, Keys.OemTilde)]
+        public ButtonBinding ToggleDebugConsole { get; set; }
+
         [SettingInGame(false)]
         [DefaultButtonBinding(0, Keys.OemPeriod)]
         public ButtonBinding DebugConsole { get; set; }

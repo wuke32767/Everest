@@ -26,24 +26,6 @@
       <HintPath>..\lib-stripped\FNA.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="I18N">
-      <HintPath>..\lib\I18N.dll</HintPath>
-    </Reference>
-    <Reference Include="I18N.CJK">
-      <HintPath>..\lib\I18N.CJK.dll</HintPath>
-    </Reference>
-    <Reference Include="I18N.MidEast">
-      <HintPath>..\lib\I18N.MidEast.dll</HintPath>
-    </Reference>
-    <Reference Include="I18N.Other">
-      <HintPath>..\lib\I18N.Other.dll</HintPath>
-    </Reference>
-    <Reference Include="I18N.Rare">
-      <HintPath>..\lib\I18N.Rare.dll</HintPath>
-    </Reference>
-    <Reference Include="I18N.West">
-      <HintPath>..\lib\I18N.West.dll</HintPath>
-    </Reference>
     <Reference Include="Steamworks.NET">
       <HintPath>..\lib-stripped\Steamworks.NET.dll</HintPath>
       <Private>False</Private>
@@ -77,6 +59,7 @@
     <EmbeddedResource Remove="Content\Dialog\Fonts\chinese-noto.bmfc" />
     <EmbeddedResource Remove="Content\Dialog\Fonts\chinese_additional_characters.txt" />
     <EmbeddedResource Remove="Content\**\*.xcf" />
+
   </ItemGroup>
 
   <ItemGroup>
@@ -99,6 +82,14 @@
   <ItemGroup>
     <ProjectReference Include="..\DiscordGameSDK\DiscordGameSDK.csproj" />
     <ProjectReference Include="..\NETCoreifier\NETCoreifier.csproj" />
+    <ProjectReference Include="..\EverestSplash\EverestSplash.csproj" /> <!-- Forces correct build dependency order -->
   </ItemGroup>
+  
+  <Target Name="CopyEverestSplashFiles" AfterTargets="Publish">
+    <ItemGroup> <!-- For some reason to use wildcards you have to use a property -->
+      <SplashBinaries Include="$(OutputPath)\publish\EverestSplash*;$(OutputPath)\publish\piton-runtime.yaml" />
+    </ItemGroup>
+    <Move SourceFiles="@(SplashBinaries)" DestinationFolder="$(OutputPath)\publish\EverestSplash\" />
+  </Target>
 
 </Project>
