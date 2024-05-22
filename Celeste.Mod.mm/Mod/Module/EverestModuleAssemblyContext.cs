@@ -227,7 +227,7 @@ namespace Celeste.Mod {
             string symPath = Path.ChangeExtension(assemblyPath, "pdb");
 
             if (ModuleMeta.PathDirectory != null) {
-                return (assemblyPath, symPath);
+                return (File.Exists(assemblyPath) ? assemblyPath : null, File.Exists(symPath) ? symPath : null);
             }
 
             if (ModuleMeta.PathArchive != null) {
@@ -276,7 +276,6 @@ namespace Celeste.Mod {
         private static Assembly TryLoadCachedAssembly(EverestModuleMetadata meta, string asmName, string cachePath, string cacheChecksumPath, string[] checksums) {
             // Check if the cached assembly + its checksums exist on disk, and if the checksums match
             if (!File.Exists(cachePath) || !File.Exists(cacheChecksumPath)) {
-                Logger.Log(LogLevel.Verbose, "relinker", $"Cache miss - no cache file for {meta} - {asmName}");
                 return null;
             }
 
