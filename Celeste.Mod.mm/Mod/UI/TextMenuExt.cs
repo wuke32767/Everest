@@ -6,6 +6,7 @@ using Monocle;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using static Celeste.patch_TextMenu;
 
 namespace Celeste {
@@ -1480,6 +1481,7 @@ namespace Celeste {
 
         public class TextBox : TextMenu.Item {
             private static readonly float DEFAULT_TEXT_SCALE = 1.10f;
+            private static readonly FieldInfo mInputVirtualInputsField = typeof(MInput).GetField("VirtualInputs", BindingFlags.NonPublic | BindingFlags.Static);
 
             public delegate void OnTextChangeHandler(string text);
             public event OnTextChangeHandler OnTextChange;
@@ -1500,7 +1502,7 @@ namespace Celeste {
             public float StrokeSize { get; set; } = 2f;
             public Color StrokeColor { get; set; } = Color.Black;
             public Color PlaceHolderTextColor { get; set; } = Color.LightGray * 0.75f;
-            public Color SearchBarColor { get; set; } = Color.DarkSlateGray * 0.8f;
+            public Color TextBoxColor { get; set; } = Color.DarkSlateGray * 0.8f;
             public Vector2 TextScale { get; set; } = Vector2.One * DEFAULT_TEXT_SCALE;
             public Vector2 TextPadding { get; set; } = new Vector2(ActiveFont.Measure(' ').X * DEFAULT_TEXT_SCALE, ActiveFont.LineHeight * DEFAULT_TEXT_SCALE / 6);
             public float WidthScale { get; set; } = 1;
@@ -1550,7 +1552,7 @@ namespace Celeste {
             public override void Render(Vector2 position, bool highlighted) {
                 Vector2 textPosition = new(position.X + TextPadding.X, position.Y + (Height() / 2));
 
-                Draw.Rect(position, Width, Height(), SearchBarColor);
+                Draw.Rect(position, Width, Height(), TextBoxColor);
 
                 if (Text.Length <= 0 && !string.IsNullOrEmpty(PlaceholderText)) {
                     Vector2 placeholderSize = ActiveFont.Measure(PlaceholderText) * TextScale;
@@ -1681,6 +1683,16 @@ namespace Celeste {
 
                     // We need to disable all other inputs if the textBox consumed that an input,
                     MInput.Disabled = TextBoxConsumedInput;
+                    if (TextBoxConsumedInput) {
+                        // Because we can only control the value of MInput.Disable for the duration of the paused menu Update
+                        // we have to consume all the button presses to emulate disabling MInput for the rest of the Update call
+                        foreach (VirtualInput input in (List<VirtualInput>) mInputVirtualInputsField.GetValue(null)) {
+                            if (input is VirtualButton button) {
+                                button.ConsumePress();
+                            }
+                        }
+                    }
+
 
                     // ensure the player never enters free cam while typing, so to cover the case our Update() gets called we consume the input
                     // and if we get called afterwards we set ToggleMountainFreeCam to false before the next Render() call to MountainRenderer
@@ -1715,10 +1727,10 @@ namespace Celeste {
         public class Modal : patch_Item {
             public Color BoxBorderColor { get; set; } = Color.White;
             public Color BoxBackgroundColor { get; set; } = Color.Black * 0.8f;
+            public readonly TextMenu.Item Item;
             public int BorderThickness { get; set; } = 2;
             private readonly float? absoluteY;
             private readonly float? absoluteX;
-            private readonly TextMenu.Item item;
 
             public Modal(TextMenu.Item item, float? absoluteX, float? absoluteY) {
                 AboveAll = true;
@@ -1726,19 +1738,19 @@ namespace Celeste {
                 IncludeWidthInMeasurement = false;
                 this.absoluteY = absoluteY;
                 this.absoluteX = absoluteX;
-                this.item = item;
+                Item = item;
             }
 
             public override void Added() {
                 base.Added();
-                item.Container = Container;
-                item.Added();
+                Item.Container = Container;
+                Item.Added();
             }
 
             public override void Update() {
                 base.Update();
-                item.OnUpdate?.Invoke();
-                item.Update();
+                Item.OnUpdate?.Invoke();
+                Item.Update();
             }
 
             public override bool AlwaysRender => true;
@@ -1754,10 +1766,10 @@ namespace Celeste {
             public override void Render(Vector2 position, bool highlighted) {
                 Vector2 renderPosition = new(absoluteX ?? position.X, absoluteY ?? position.Y);
                 for (int i = 1; i <= BorderThickness; i++) {
-                    Draw.HollowRect(renderPosition.X - i, renderPosition.Y - i, item.Width + (2 * i), item.Height() + (2 * i), BoxBorderColor * Container.Alpha);
+                    Draw.HollowRect(renderPosition.X - i, renderPosition.Y - i, Item.Width + (2 * i), Item.Height() + (2 * i), BoxBorderColor * Container.Alpha);
                 }
 
-                item.Render(renderPosition, highlighted);
+                Item.Render(renderPosition, highlighted);
             }
         }
 
