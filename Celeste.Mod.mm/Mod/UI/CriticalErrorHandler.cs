@@ -1,4 +1,5 @@
 using Celeste.Mod.Core;
+using Celeste.Mod.Helpers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
@@ -220,8 +221,33 @@ namespace Celeste.Mod.UI {
                 writer.WriteLine("Loaded Mods");
                 try {
                     lock (Everest._Modules) {
-                        foreach (EverestModule mod in Everest._Modules)
-                            writer.WriteLine($" - {mod.Metadata.Name}: {mod.Metadata.VersionString}{mod switch {NullModule => "", _ => $" [{mod.GetType().FullName}]"}}");
+                        bool updatesAvailable = ModUpdaterHelper.IsAsyncUpdateCheckingDone();
+                        Dictionary<EverestModuleMetadata, ModUpdateInfo> availableUpdatesInv = new();
+                        if (updatesAvailable) {
+                            try {
+                                SortedDictionary<ModUpdateInfo, EverestModuleMetadata> availableUpdates =
+                                    ModUpdaterHelper.GetAsyncLoadedModUpdates();
+                                foreach ((ModUpdateInfo key, EverestModuleMetadata value) in availableUpdates) {
+                                    availableUpdatesInv[value] = key;
+                                }
+
+                                writer.WriteLine(
+                                    "(entries marked with * are known to not match latest on the database)");
+                            } catch (Exception ex) {
+                                writer.WriteLine($"(failed to check update status: {ex.GetType().FullName}: {ex.Message})");
+                                updatesAvailable = false;
+                            }
+                        }
+                        
+                        foreach (EverestModule mod in Everest._Modules) {
+                            writer.Write($" - {mod.Metadata.Name}: ");
+                            writer.Write($"{mod.Metadata.VersionString}");
+                            if (updatesAvailable && availableUpdatesInv.TryGetValue(mod.Metadata, out ModUpdateInfo updateInfo)) {
+                                writer.Write($"* (-> {updateInfo.Version})");
+                            }
+                            writer.Write($"{mod switch { NullModule => "", _ => $" [{mod.GetType().FullName}]" }}");
+                            writer.WriteLine();
+                        }
                     }
                 } catch (Exception ex) {
                     writer.WriteLine($" - error listing mods: {ex.GetType().FullName}: {ex.Message}");
@@ -237,9 +263,9 @@ namespace Celeste.Mod.UI {
                 StackTrace trace = new(error, true);
                 StackFrame latestFrame = trace.GetFrame(0);
                 if (latestFrame != null) {
-                    writer.WriteLine($"Last stack trace: {latestFrame}");
-                    writer.WriteLine($"Trace IL offset: {latestFrame.GetILOffset()}");
-                    writer.WriteLine($"Trace native offset: {latestFrame.GetNativeOffset()}");
+                    writer.WriteLine($"Last stack frame: {latestFrame}");
+                    writer.WriteLine($"Frame IL offset: {latestFrame.GetILOffset()}");
+                    writer.WriteLine($"Frame native offset: {latestFrame.GetNativeOffset()}");
                 } else {
                     writer.WriteLine("Couldn't fetch latest frame!");
                 }
