@@ -12,7 +12,7 @@ internal sealed class DepthDecalRegistryHandler : DecalRegistryHandler {
     }
 
     public override void ApplyTo(Decal decal) {
-        if (_depth is { } depth)
+        if (_depth is { } depth && !((patch_Decal)decal).DepthSetByPlacement)
             decal.Depth = depth;
     }
 }
