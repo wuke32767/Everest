@@ -1,12 +1,10 @@
 ﻿using Celeste.Mod;
-using Celeste.Mod.Core;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Monocle;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using static Celeste.patch_TextMenu;
 
 namespace Celeste {
@@ -1481,7 +1479,6 @@ namespace Celeste {
 
         public class TextBox : TextMenu.Item {
             private static readonly float DEFAULT_TEXT_SCALE = 1.10f;
-            private static readonly FieldInfo mInputVirtualInputsField = typeof(MInput).GetField("VirtualInputs", BindingFlags.NonPublic | BindingFlags.Static);
 
             public delegate void OnTextChangeHandler(string text);
             public event OnTextChangeHandler OnTextChange;
@@ -1686,7 +1683,7 @@ namespace Celeste {
                     if (TextBoxConsumedInput) {
                         // Because we can only control the value of MInput.Disable for the duration of the paused menu Update
                         // we have to consume all the button presses to emulate disabling MInput for the rest of the Update call
-                        foreach (VirtualInput input in (List<VirtualInput>) mInputVirtualInputsField.GetValue(null)) {
+                        foreach (VirtualInput input in patch_MInput.VirtualInputs) {
                             if (input is VirtualButton button) {
                                 button.ConsumePress();
                             }
