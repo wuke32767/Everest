@@ -8,7 +8,7 @@ internal sealed class DepthDecalRegistryHandler : DecalRegistryHandler {
     public override string Name => "depth";
     
     public override void Parse(XmlAttributeCollection xml) {
-        _depth = GetNullable<int>(xml, "depth");
+        _depth = GetNullable<int>(xml, "value");
     }
 
     public override void ApplyTo(Decal decal) {
