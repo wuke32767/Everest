@@ -113,16 +113,20 @@ namespace Celeste.Mod {
             SendMessageToSplash("#finish" + totalMods + ";" + "Almost done...");
         }
 
+        private static Task lastFlush;
         private static void SendMessageToSplash(string message) {
             lock (splashPipeLock) {
                 if (splashPipeServerStream == null)
                     return; // If the splash never ran, no-op
                 if (!splashPipeServerStreamConnection.IsCompleted || !splashPipeServerStream.IsConnected)
                     return; // If the splash never connected or its no longer alive, no-op
+                if (lastFlush != null && !lastFlush.IsCompletedSuccessfully)
+                    return; // If the last flush failed or did not complete in time, drop the messages
                 try {
                     StreamWriter sw = new(splashPipeServerStream);
                     sw.WriteLine(message);
-                    sw.Flush();
+                    lastFlush = sw.FlushAsync(); // Windows pipes have a tendency to deadlock writes if the other end doesn't read immediately
+                    lastFlush.Wait(1000);
                 } catch (Exception e) {
                     Logger.Log(LogLevel.Error, "EverestSplash", "Could not send data to splash!");
                     Logger.LogDetailed(e);
@@ -137,7 +141,7 @@ namespace Celeste.Mod {
                     Environment.SetEnvironmentVariable("EVEREST_SKIP_REQUEST_FOCUS_AFTER_SPLASH", "1");
                 }
                 if (splashPipeServerStream == null) return; // If the splash never ran, no-op
-                if (!splashPipeServerStreamConnection.IsCompleted) {
+                if (!splashPipeServerStreamConnection.IsCompleted || !lastFlush.IsCompletedSuccessfully) {
                     Logger.Log(LogLevel.Error, "EverestSplash", "Could not connect to splash");
                     if (!splashProcess.HasExited) { // if it hangs up, just kill it
                         splashProcess.Kill();
@@ -152,7 +156,7 @@ namespace Celeste.Mod {
                     sw.Flush();
                     Thread splashFeedbackThread = new(() => {
                         try {
-                            // `splashPipeServerStream` is intentionally disposed on outer stream, its the easiest way to kill this thread
+                            // `splashPipeServerStream` is intentionally disposed on outer stream, it's the easiest way to kill this thread
                             StreamReader sr = new(splashPipeServerStream);
                             // yes, this, inevitably, slows down the everest boot process, but see EverestSplashWindow.FeedBack
                             // for more info

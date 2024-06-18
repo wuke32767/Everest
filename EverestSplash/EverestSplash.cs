@@ -5,8 +5,9 @@ using System.IO;
 using System.IO.Pipes;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
+using Timer = System.Timers.Timer;
 
 namespace EverestSplash;
 
@@ -139,6 +140,8 @@ public class EverestSplashWindow {
     private WindowInfo windowInfo;
     private readonly string targetRenderer;
     private readonly Assembly currentAssembly;
+    private readonly CancellationTokenSource tokenSource = new();
+    private bool earlyExit = false;
 
     private FontLoader? renogareFont;
     private LoadingProgress _loadingProgress = new(0, 0, "");
@@ -183,42 +186,47 @@ public class EverestSplashWindow {
         Console.WriteLine("Running splash on " + serverName);
         
         ClientPipe = new NamedPipeClientStream(".", serverName);
-        ClientPipe.ConnectAsync().ContinueWith(_ => {
+        ClientPipe.ConnectAsync().ContinueWith(async _ => {
             try {
                 StreamReader sr = new(ClientPipe);
-                while (sr.ReadLine() is { } message) {
+                while (await sr.ReadLineAsync(tokenSource.Token) is { } message) {
                     if (message == "#stop") { // Stop the splash
                         break;
                     }
 
                     const string progressPfx = "#progress";
-                    if (message.StartsWith(progressPfx)) { // Mod loading progress message received: "#progress{loadedMods}{totalMods}{modName}"
+                    if (message.StartsWith(progressPfx)) {
+                        // Mod loading progress message received: "#progress{loadedMods}{totalMods}{modName}"
                         int countEnd = message.IndexOf(";", StringComparison.Ordinal);
                         int totalEnd = message.IndexOf(";", countEnd + 1, StringComparison.Ordinal);
-                        
+
                         int loadedMods = int.Parse(message[progressPfx.Length..countEnd]);
-                        int totalMods = int.Parse(message[(countEnd+1)..totalEnd]);
-                        loadingProgress = new LoadingProgress(loadedMods, totalMods, message[(totalEnd+1)..]);
+                        int totalMods = int.Parse(message[(countEnd + 1)..totalEnd]);
+                        loadingProgress = new LoadingProgress(loadedMods, totalMods, message[(totalEnd + 1)..]);
                     }
 
                     const string finishPfx = "#finish";
-                    if (message.StartsWith(finishPfx)) { // Mod finish progress message received: "#finish{totalMods}{message}"
+                    if (message.StartsWith(finishPfx)) {
+                        // Mod finish progress message received: "#finish{totalMods}{message}"
                         int totalEnd = message.IndexOf(";", StringComparison.Ordinal);
 
                         int totalMods = int.Parse(message[finishPfx.Length..totalEnd]);
                         loadingProgress = new LoadingProgress(totalMods, totalMods, message[(totalEnd + 1)..], true);
                     }
                 }
+
+            } catch (OperationCanceledException) {
+                // Swallow it
             } catch (Exception e) {
                 Console.Error.WriteLine(e);
                 // We want to exit if a read error occurred, we must not be around when FNA's main loop starts
             }
+            Console.WriteLine("Exiting splash...");
             SDL.SDL_Event userEvent = new() { // Fake a user event, we don't need anything fancier for now
                 type = SDL.SDL_EventType.SDL_USEREVENT,
             };
             SDL.SDL_PushEvent(ref userEvent); // This is thread safe :)
-            Console.WriteLine("Exiting splash...");
-        });
+        }, tokenSource.Token);
 
         Init(); // Init right away
     }
@@ -230,8 +238,11 @@ public class EverestSplashWindow {
         HandleWindow();
 
         Cleanup();
-
-        FeedBack();
+        
+        // Exiting early means the splash was not asked to do so by Everest,
+        // as such there's no need to communicate that.
+        if (!earlyExit)
+            FeedBack();
     }
 
     private void Init() {
@@ -359,6 +370,9 @@ public class EverestSplashWindow {
             while (SDL.SDL_PollEvent(out SDL.SDL_Event e) != 0) {
                 // An SDL_USEREVENT is sent when the splash receives the quit command
                 if (e.type is SDL.SDL_EventType.SDL_QUIT or SDL.SDL_EventType.SDL_USEREVENT) {
+                    // SDL_QUIT is currently the only way to exit early (other that crashing)
+                    if (e.type is SDL.SDL_EventType.SDL_QUIT)
+                        earlyExit = true;
                     return; // quit asap
                 }
             }
@@ -463,12 +477,14 @@ public class EverestSplashWindow {
             timer.Dispose();
         }
         timers.Clear();
+        tokenSource.Cancel(); // Make sure the read thread is gone
     }
 
     /// <summary>
     /// Kills the window, stopping everything and releasing all resources.
     /// </summary>
     public void Kill() {
+        tokenSource.Cancel();
         ClientPipe.Dispose();
         Cleanup();
     }
@@ -476,14 +492,16 @@ public class EverestSplashWindow {
     /// <summary>
     /// Notifies the server that we're done.
     /// There would be no issue if we just closed the splash after the game window has been created (since its on diferent processes)
-    /// But if, for some reason, the splash does not recieve the stop command everest will assume it is about to close,
+    /// But if, for some reason, the splash does not receive the stop command everest will assume it is about to close,
     /// leaving the splash alive (and confusing users), this way it is possible to know when the splash is gone, and when
-    /// to kill it if its not responding.
+    /// to kill it if it's not responding.
     /// </summary>
     private void FeedBack() {
         StreamWriter sw = new(ClientPipe);
         sw.WriteLine("done");
         sw.Flush();
+        sw.Dispose();
+        ClientPipe.Dispose();
         Console.WriteLine("Splash done!");
     }
 
