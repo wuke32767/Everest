@@ -24,6 +24,9 @@ namespace Celeste {
         private bool angleFix = false;
         // Maximum rad/s turn speed, see `PatchBirdPathUpdate`
         private float angleFixMaxRotation = 1;
+        // If this entity is placed in a vanilla map we will forcibly disable all changes
+        // Note that `angleFix` is false by default so that will also apply in vanilla
+        private bool inVanilla = false;
         
         // Compiler satisfaction
         [MonoModIgnore]
@@ -42,7 +45,15 @@ namespace Celeste {
             this.angleFix = data.Bool("angle_fix");
             this.angleFixMaxRotation = data.Float("angle_fix_max_rotation_speed");
         }
-        
+
+        public extern void orig_Added(Scene scene);
+
+        public override void Added(Scene scene) {
+            // Let's assume that this will only be placed in `Level`s
+            inVanilla = (scene as Level)!.Session.Area.GetLevelSet() == "Celeste";
+            orig_Added(scene);
+        }
+
         [MonoModIgnore]
         [PatchBirdPathRoutine]
         private extern IEnumerator Routine();
@@ -50,7 +61,6 @@ namespace Celeste {
         [MonoModIgnore]
         [PatchBirdPathUpdate]
         public override extern void Update();
-       
 
         // Other algorithm to calculate the rotation of the bird, see `PatchBirdPathUpdate`
         // Used by the il patched code in `Update`
@@ -88,17 +98,34 @@ namespace MonoMod {
         /// consider this as a vanilla bug.
         /// </summary>
         public static void PatchBirdPathRoutine(MethodDefinition method, CustomAttribute attrib) {
-            method = MonoModRule.Modder.Module.GetType("Celeste.BirdPath/<Routine>d__18").FindMethod("MoveNext");
+            TypeDefinition closureRoutineType = MonoModRule.Modder.Module.GetType("Celeste.BirdPath/<Routine>d__18");
+            method = closureRoutineType.FindMethod("MoveNext")!;
+            FieldReference closureThisField = closureRoutineType.FindField("<>4__this")!;
+            TypeDefinition birdPathType = MonoModRule.Modder.Module.GetType("Celeste.BirdPath");
+            FieldReference inVanillaField = birdPathType.FindField("inVanilla")!;
+            
             new ILContext(method).Invoke(il => {
                 ILCursor cursor = new(il);
 
                 // Go before the bird.speedMult
-                cursor.GotoNext(MoveType.Before, instr => instr.MatchLdloc1(), instr => instr.MatchLdfld("Celeste.BirdPath", "speedMult"));
-                // remove the:
-                // ldloc.1
-                // ldfld Celeste.BirdPath::speedMult
-                // mul
-                cursor.RemoveRange(3);
+                cursor.GotoNext(MoveType.Before, instr => instr.MatchLdloc1(), 
+                    instr => instr.MatchLdfld("Celeste.BirdPath", "speedMult"));
+                cursor.EmitLdarg0();
+                cursor.EmitLdfld(closureThisField); // This is a closure, we need the actual instance
+                cursor.EmitLdfld(inVanillaField); // Emit the vanilla check
+                ILLabel skip = cursor.DefineLabel();
+                ILLabel firstPart = cursor.DefineLabel();
+                cursor.EmitBrfalse(firstPart);
+                // And emulate a ternary for readability, otherwise decompilers will convert the for loop into a 
+                // while loop
+                cursor.GotoNext(MoveType.Before, i => i.MatchMul());
+                // As such we keep the original speedMult in one branch
+                cursor.EmitBr(skip);
+                // And a 1 in the fixed one, then it is multiplied, so it's effectively a no-op
+                cursor.EmitLdcR4(1);
+                cursor.MarkLabel(skip);
+                cursor.Index--; // The second branch is a single instr
+                cursor.MarkLabel(firstPart);
             });
         }
 
