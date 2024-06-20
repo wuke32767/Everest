@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using System;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -36,7 +37,7 @@ namespace Celeste.Mod {
             /// <summary>
             /// The currently loaded mod blacklist.
             /// </summary>
-            public static IReadOnlyCollection<string> Blacklist => (IReadOnlyCollection<string>) _Blacklist ;
+            public static IReadOnlyCollection<string> Blacklist => _Blacklist.ToImmutableHashSet();
 
             /// <summary>
             /// The path to the Everest /Mods/favorites.txt file.
