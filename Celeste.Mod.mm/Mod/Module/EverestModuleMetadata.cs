@@ -74,12 +74,10 @@ namespace Celeste.Mod {
         /// </summary>
         public List<EverestModuleMetadata> OptionalDependencies { get; set; } = new List<EverestModuleMetadata>();
 
-        private byte[] _Hash;
-
         /// <summary>
         /// The runtime mod hash. Might not be determined by all mod content.
         /// </summary>
-        public byte[] Hash => _Hash ??= Everest.GetChecksum(this);
+        public byte[] Hash { get; internal set; }
 
         /// <summary>
         /// Whether this module supports experimental live code reloading or not.
