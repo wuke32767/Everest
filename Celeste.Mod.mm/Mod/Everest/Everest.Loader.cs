@@ -323,6 +323,11 @@ namespace Celeste.Mod {
                 };
 
                 if (multimetas != null) {
+                    // When estimating the total mod count for the splash it is assumed that there will be exactly one
+                    // ModuleMetadata per filesystem entry, which is a valid assumption most of the time, but very few
+                    // mods do have multiple ModuleMetadatas in its everest.yaml, that's why we increase the total count
+                    // late here when we realize that one may contain multiple
+                    EverestSplashHandler.IncreaseTotalModCount(multimetas.Length-1);
                     foreach (EverestModuleMetadata multimeta in multimetas) {
                         multimeta.Multimeta = multimetas;
                         if (contentMetaParent == null)
@@ -405,6 +410,11 @@ namespace Celeste.Mod {
                 };
 
                 if (multimetas != null) {
+                    // When estimating the total mod count for the splash it is assumed that there will be exactly one
+                    // ModuleMetadata per filesystem entry, which is a valid assumption most of the time, but very few
+                    // mods do have multiple ModuleMetadatas in its everest.yaml, that's why we increase the total count
+                    // late here when we realize that one may contain multiple
+                    EverestSplashHandler.IncreaseTotalModCount(multimetas.Length-1);
                     foreach (EverestModuleMetadata multimeta in multimetas) {
                         multimeta.Multimeta = multimetas;
                         if (contentMetaParent == null)
