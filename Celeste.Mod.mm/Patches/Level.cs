@@ -685,6 +685,7 @@ namespace MonoMod {
             m_LoadStrings_Add.DeclaringType = t_LoadStrings;
             m_LoadStrings_ctor.DeclaringType = t_LoadStrings;
 
+            MethodDefinition m_EntityID_ctor_string_int32 = MonoModRule.Modder.Module.GetType("Celeste.EntityID").FindMethod(".ctor"); // this is found
             FieldDefinition f_EntityData_EntityID = MonoModRule.Modder.Module.GetType("Celeste.EntityData").Resolve().FindField("EntityID");
 
             MethodReference m_IsInDoNotLoadIncreased = context.Method.DeclaringType.FindMethod("_IsInDoNotLoadIncreased")!;
@@ -715,13 +716,15 @@ namespace MonoMod {
             cursor.Index = 0;
             // First instance of call EntityID.ctor is referenced to ldloca.s 19 = entityID (in Entities loop), we want to add `entityID = entity.EntityID` after it
             // We also don't want to break mod parity by replacing instruction content
-            cursor.GotoNext(MoveType.After, i => i.MatchCall("Celeste.EntityID", ".ctor(System.Single, System.Int32")); // doing this with TypeReference is bad
+            cursor.GotoNext(MoveType.After, i => i.MatchLdloc(18)); // this is the only way i found that the gotoNext works. someone could easily clean this up in the future.
+            cursor.Index++; // checking against call System.Void Celeste.EntityID::.ctor(System.String, System.Int32) from the MonoModRule class didn't work.
             cursor.EmitLdloc(17); // emits entity
             cursor.EmitLdfld(f_EntityData_EntityID);
             cursor.EmitStloc(19); // stores to entityID
             // Second instance of call EntityID.ctor is referenced to ldloca.s 48 = entityID3 (in Triggers loop), we want to add entityID3 = trigger.EntityID` after it
             // We also don't want to break mod parity by replacing instruction content
-            cursor.GotoNext(MoveType.After, i => i.MatchCall("Celeste.EntityID", ".ctor(System.Single, System.Int32")); // doing this with TypeReference is bad
+            cursor.GotoNext(MoveType.After, i => i.MatchLdloc(47));
+            cursor.Index++;
             cursor.EmitLdloc(46); // emits trigger
             cursor.EmitLdfld(f_EntityData_EntityID);
             cursor.EmitStloc(48); // stores to entityID3
