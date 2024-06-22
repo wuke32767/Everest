@@ -685,7 +685,6 @@ namespace MonoMod {
             m_LoadStrings_Add.DeclaringType = t_LoadStrings;
             m_LoadStrings_ctor.DeclaringType = t_LoadStrings;
 
-            MethodDefinition m_EntityID_ctor_string_int32 = MonoModRule.Modder.Module.GetType("Celeste.EntityID").FindMethod(".ctor"); // this is found
             FieldDefinition f_EntityData_EntityID = MonoModRule.Modder.Module.GetType("Celeste.EntityData").Resolve().FindField("EntityID");
 
             MethodReference m_IsInDoNotLoadIncreased = context.Method.DeclaringType.FindMethod("_IsInDoNotLoadIncreased")!;
