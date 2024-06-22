@@ -14,8 +14,8 @@ namespace Celeste {
 
         public EntityID EntityID;
 
-        internal void SetEntityID(bool? isTrigger = null) {
-            EntityID = new EntityID(Level.Name ?? string.Empty, ID + ((isTrigger ?? false) || patch_LevelData._isRegisteringTriggers ? 10000000 : 0));
+        internal void InitializeEntityID() {
+            EntityID = new EntityID(Level.Name ?? string.Empty, ID + (patch_LevelData._isRegisteringTriggers ? 10000000 : 0));
         }
 
     }
