@@ -1,6 +1,7 @@
 #pragma warning disable CS0626 // Method, operator, or accessor is marked external and has no attributes on it
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
+using Celeste;
 using Celeste.Mod;
 using Celeste.Mod.Core;
 using Celeste.Mod.Entities;
@@ -11,6 +12,7 @@ using FMOD.Studio;
 using Microsoft.Xna.Framework;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using Monocle;
 using MonoMod;
 using MonoMod.Cil;
@@ -612,9 +614,6 @@ namespace Celeste {
         }
 
         private bool _IsInDoNotLoadIncreased(LevelData level, EntityData entity) => Session.DoNotLoad.Contains(new EntityID(level.Name, entity.ID + 20000000));
-
-        [ThreadStatic]
-        internal static bool _isLoadingTriggers;
     }
 
     public static class LevelExt {
@@ -686,7 +685,8 @@ namespace MonoMod {
             m_LoadStrings_Add.DeclaringType = t_LoadStrings;
             m_LoadStrings_ctor.DeclaringType = t_LoadStrings;
 
-            FieldReference f_isLoadingTriggers = context.Method.DeclaringType.FindField("_isLoadingTriggers")!;
+            FieldDefinition f_EntityData_EntityID = MonoModRule.Modder.Module.GetType("Celeste.EntityData").Resolve().FindField("EntityID");
+
             MethodReference m_IsInDoNotLoadIncreased = context.Method.DeclaringType.FindMethod("_IsInDoNotLoadIncreased")!;
 
             ILCursor cursor = new ILCursor(context);
@@ -713,34 +713,20 @@ namespace MonoMod {
 
             // Reset to apply trigger loading patches
             cursor.Index = 0;
-            int v_levelData = -1;
-            cursor.GotoNext(MoveType.Before, instr => instr.MatchLdloc(out v_levelData), instr => instr.MatchLdfld("Celeste.LevelData", "Triggers"));
-            // set global flag _isLoadingTriggers to true
-            cursor.EmitLdcI4(1);
-            cursor.EmitStsfld(f_isLoadingTriggers);
-            int v_entityData = -1;
-            cursor.GotoNext(instr => instr.MatchLdloc(out v_entityData), instr => instr.MatchLdfld("Celeste.EntityData", "ID"));
-            ILLabel continueLabel = null;
-            cursor.GotoNext(MoveType.After, instr => instr.MatchBrtrue(out continueLabel));
-            // add
-            // || _IsInDoNotLoadIncreased(levelData, trigger)
-            // to if condition for continue to handle triggers that already add 10000000 to their DoNotLoad entry
-            cursor.EmitLdarg0();
-            cursor.EmitLdloc(v_levelData);
-            cursor.EmitLdloc(v_entityData);
-            cursor.EmitCall(m_IsInDoNotLoadIncreased);
-            cursor.EmitBrtrue(continueLabel);
-            cursor.GotoNext(MoveType.AfterLabel, instr => instr.MatchLdloc(out _), instr => instr.MatchLdfld("Celeste.LevelData", "FgDecals"));
-            Instruction oldFinallyEnd = cursor.Next;
-            // set _isLoadingTriggers to false
-            cursor.EmitLdcI4(0);
-            Instruction newFinallyEnd = cursor.Prev;
-            cursor.EmitStsfld(f_isLoadingTriggers);
-            // fix end of finally block
-            foreach (ExceptionHandler handler in context.Body.ExceptionHandlers.Where(handler => handler.HandlerEnd == oldFinallyEnd)) {
-                handler.HandlerEnd = newFinallyEnd;
-                break;
-            }
+            // First instance of call EntityID.ctor is referenced to ldloca.s 19 = entityID (in Entities loop), we want to add `entityID = entity.EntityID` after it
+            // We also don't want to break mod parity by replacing instruction content
+            cursor.GotoNext(MoveType.After, i => i.MatchLdloc(18)); // this is the only way i found that the gotoNext works. someone could easily clean this up in the future.
+            cursor.Index++; // checking against call System.Void Celeste.EntityID::.ctor(System.String, System.Int32) from the MonoModRule class didn't work.
+            cursor.EmitLdloc(17); // emits entity
+            cursor.EmitLdfld(f_EntityData_EntityID);
+            cursor.EmitStloc(19); // stores to entityID
+            // Second instance of call EntityID.ctor is referenced to ldloca.s 48 = entityID3 (in Triggers loop), we want to add entityID3 = trigger.EntityID` after it
+            // We also don't want to break mod parity by replacing instruction content
+            cursor.GotoNext(MoveType.After, i => i.MatchLdloc(47));
+            cursor.Index++;
+            cursor.EmitLdloc(46); // emits trigger
+            cursor.EmitLdfld(f_EntityData_EntityID);
+            cursor.EmitStloc(48); // stores to entityID3
 
             // Reset to apply entity patches
             cursor.Index = 0;
