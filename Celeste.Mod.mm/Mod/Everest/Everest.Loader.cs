@@ -618,7 +618,7 @@ namespace Celeste.Mod {
 
                             ctor = type.GetConstructor(new Type[] { typeof(EntityData), typeof(Vector2), typeof(EntityID) });
                             if (ctor != null) {
-                                loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(new object[] { entityData, offset, (entityData as patch_EntityData).EntityID });
+                                loader = (level, levelData, offset, entityData) => (Entity) ctor.Invoke(new object[] { entityData, offset, new EntityID(levelData.Name, entityData.ID + (patch_Level._isLoadingTriggers ? 10000000 : 0)) });
                                 goto RegisterEntityLoader;
                             }
 
