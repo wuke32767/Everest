@@ -495,9 +495,7 @@ namespace Celeste.Mod {
                     return true;
 
                 using var _ = new ScopeFinalizer(() => Events.Everest.LoadMod(meta));
-                
-                // (Re)compute the hash
-                meta.Hash = GetChecksum(meta);
+
                 // Create an assembly context
                 meta.AssemblyContext ??= new EverestModuleAssemblyContext(meta);
 
