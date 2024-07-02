@@ -10,9 +10,14 @@ using MonoMod.InlineRT;
 using MonoMod.Utils;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using Celeste;
 
 namespace Celeste {
     public class patch_LevelData : LevelData {
+
+        [ThreadStatic]
+        internal static bool _isRegisteringTriggers;
 
         public Vector2? DefaultSpawn;
 
@@ -24,6 +29,7 @@ namespace Celeste {
         [PatchLevelDataBerryTracker]
         [PatchLevelDataDecalLoader]
         [PatchLevelDataSpawnpointLoader]
+        [PatchLevelDataTriggerIDOffset]
         public extern void orig_ctor(BinaryPacker.Element data);
 
         [MonoModConstructor]
@@ -40,7 +46,7 @@ namespace Celeste {
         // Optimise the method
         [MonoModReplace]
         private EntityData CreateEntityData(BinaryPacker.Element entity) {
-            EntityData entityData = new() {
+            patch_EntityData entityData = new() {
                 Name = entity.Name,
                 Level = this
             };
@@ -51,6 +57,7 @@ namespace Celeste {
                     {
                         case "id":
                             entityData.ID = (int) value;
+                            entityData.InitializeEntityID(this.Name);
                             break;
                         case "x":
                             entityData.Position.X = Convert.ToSingle(value, CultureInfo.InvariantCulture);
@@ -123,6 +130,9 @@ namespace MonoMod {
     /// </summary>
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchLevelDataSpawnpointLoader))]
     class PatchLevelDataSpawnpointLoaderAttribute : Attribute { }
+
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchLevelDataTriggerIDOffset))]
+    class PatchLevelDataTriggerIDOffsetAttribute : Attribute { }
 
     static partial class MonoModRules {
 
@@ -258,6 +268,34 @@ namespace MonoMod {
             cursor.Emit(OpCodes.Ldloc, v_spawnCoords);
             cursor.Emit(OpCodes.Callvirt, m_LevelDataCheckForDefaultSpawn);
             cursor.Emit(OpCodes.Ldloc, v_spawnCoords);
+        }
+
+        public static void PatchLevelDataTriggerIDOffset(ILContext context, CustomAttribute attrib) {
+            FieldDefinition f_LevelData__isRegisteringTriggers = context.Method.DeclaringType.FindField("_isRegisteringTriggers");
+
+            ILCursor cursor = new(context);
+            ILLabel oldLeave = null, endOfIfTriggers = null;
+
+            cursor.GotoNext(i => i.MatchStloc(10));
+            cursor.GotoPrev(MoveType.After, i => i.MatchBrfalse(out endOfIfTriggers));
+            cursor.EmitLdcI4(1);
+            cursor.EmitStsfld(f_LevelData__isRegisteringTriggers);
+            cursor.GotoNext(i => i.MatchLeave(out oldLeave));
+            ILCursor clone = cursor.Clone();
+            cursor.GotoNext(i => i.MatchLdloc(7), i => true, i => i.MatchLdstr("bgdecals"));
+            Instruction oldFinallyEnd = cursor.Next;
+            ILLabel newLeave = cursor.MarkLabel();
+            cursor.EmitLdcI4(0);
+            Instruction newFinallyEnd = cursor.Prev;
+            cursor.EmitStsfld(f_LevelData__isRegisteringTriggers);
+            cursor.EmitBr(oldLeave);
+
+            foreach (ExceptionHandler handler in context.Body.ExceptionHandlers.Where(handler => handler.HandlerEnd == oldFinallyEnd)) {
+                handler.HandlerEnd = newFinallyEnd;
+                break;
+            }
+
+            clone.Next.Operand = newLeave;
         }
     }
 }
