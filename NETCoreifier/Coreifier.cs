@@ -18,7 +18,7 @@ namespace NETCoreifier {
             ModuleDefinition module = null;
             try {
                 // Read the module
-                ReaderParameters readerParams = new ReaderParameters()  { ReadSymbols = true };
+                ReaderParameters readerParams = new(ReadingMode.Immediate)  { ReadSymbols = true };
                 try {
                     module = ModuleDefinition.ReadModule(inputAsm, readerParams);
                 } catch (SymbolsNotFoundException) {
