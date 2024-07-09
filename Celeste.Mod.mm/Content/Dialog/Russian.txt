@@ -180,8 +180,6 @@
 	EVERESTUPDATER_EXTRACTIONFINISHED=	Распаковка завершена.
 	EVERESTUPDATER_RESTARTING=		Перезапуск
 	EVERESTUPDATER_RESTARTINGIN=	Перезапуск через {0}
-	EVERESTUPDATER_MISSINGRUNTIME_A=	Установка .NET Core Everest требует среду .NET 7.0
-	EVERESTUPDATER_MISSINGRUNTIME_B=	Вы можете установить его по следующей ссылке: {0}
 	EVERESTUPDATER_STARTINGFAILED=	Не удалось запустить установщик!
 	EVERESTUPDATER_ERRORHINT1=		Пожалуйста, создайте новый отчёт на GitHub @ https://github.com/EverestAPI/Everest
 	EVERESTUPDATER_ERRORHINT2=		или посетите канал #modding_help в Discord (приглашение в репозитории).
@@ -227,7 +225,6 @@
 	DEPENDENCYDOWNLOADER_DONE=						выполнено.
 	DEPENDENCYDOWNLOADER_DOWNLOAD_DATABASE_FAILED=	ОШИБКА: Загрузка базы данных модов прервана. Проверьте свой log.txt для большей информации.
 	DEPENDENCYDOWNLOADER_MUST_UPDATE_EVEREST=		ПРЕДУПРЕЖДЕНИЕ: Для загрузки некоторых модов необходима более поздня версия Everest. Установите её в меню Изменить Версию Everest.
-	DEPENDENCYDOWNLOADER_NEEDS_CORE_EVEREST=		ПРЕДУПРЕЖДЕНИЕ: Для загрузки  некоторых модов необходима (последняя WIP) сборка .NET Core Everest. Установите её в меню Изменить Версию Everest.
 	DEPENDENCYDOWNLOADER_EVEREST_UPDATE=			Everest будет обновлён до {0} для работы некоторых модов. Для продолжения нажмите Принять.
 	DEPENDENCYDOWNLOADER_MOD_NOT_FOUND=				ОШИБКА: {0} не был найден в базе данных. Пожалуйста, установите этот мод вручную.
 	DEPENDENCYDOWNLOADER_UPDATE_CELESTE=			ОШИБКА: Для работы некоторых модов необходима более поздня версия Celeste. Пожалуйста, обновите вашу игру.
