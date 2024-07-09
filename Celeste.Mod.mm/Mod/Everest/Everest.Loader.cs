@@ -832,6 +832,7 @@ namespace Celeste.Mod {
                             Logger.Log(LogLevel.Verbose, "loader", $"-> unloading: {unloadMod.Name}");
                             unloadMod.AssemblyContext?.Dispose();
                             unloadMod.AssemblyContext = null;
+                            unloadMod.InvalidateHash();
                         }
 
                         // Load modules in the reverse order determined before (dependencies before dependents)

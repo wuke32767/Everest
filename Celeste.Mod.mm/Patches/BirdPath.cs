@@ -13,10 +13,10 @@ namespace Celeste {
     public class patch_BirdPath : BirdPath {
 
         [MonoModIgnore] 
-        public new Vector2 speed;
+        public Vector2 speed;
         
         [MonoModIgnore]
-        public new Vector2 target;
+        public Vector2 target;
         
         private float oldAngle;
         private bool oldAngleInit = false;
@@ -38,7 +38,10 @@ namespace Celeste {
         }
 
         // We added two new entity data's, only this constructor is ever called, the second one is never called (and never should be)
+#pragma warning disable CS0626
         public extern void orig_ctor(EntityID id, EntityData data, Vector2 offset);
+#pragma warning restore CS0626
+
         [MonoModConstructor]
         public void ctor(EntityID id, EntityData data, Vector2 offset) {
             orig_ctor(id, data, offset);
@@ -46,7 +49,9 @@ namespace Celeste {
             this.angleFixMaxRotation = data.Float("angle_fix_max_rotation_speed");
         }
 
+#pragma warning disable CS0626
         public extern void orig_Added(Scene scene);
+#pragma warning restore CS0626
 
         public override void Added(Scene scene) {
             // Let's assume that this will only be placed in `Level`s

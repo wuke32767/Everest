@@ -137,5 +137,8 @@ namespace Celeste.Mod {
             Everest.CheckDependenciesOfDelayedMods();
         }
 
+        internal void InvalidateHash() {
+            _Hash = null;
+        }
     }
 }

@@ -36,7 +36,9 @@ namespace Celeste {
 
         public Color Color;
 
+#pragma warning disable CS0649
         public bool DepthSetByPlacement;
+#pragma warning restore CS0649
 
         private bool scaredAnimal;
 
