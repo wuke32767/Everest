@@ -93,9 +93,11 @@ namespace Celeste.Mod.Entities {
             }
         }
 
+#pragma warning disable CS1574 // SilentUpdateBlocks exists but is private
         /// <summary>
         /// Called by <see cref="CassetteBlockManager.SilentUpdateBlocks"/>.
         /// </summary>
+#pragma warning restore CS1574
         public void Start(bool activated) {
             Activated = activated;
             Mode = activated ? Modes.Enabled : Modes.Disabled;
