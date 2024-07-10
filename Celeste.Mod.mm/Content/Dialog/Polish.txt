@@ -136,7 +136,7 @@
 	MODOPTIONS_COREMODULE_NOTLOADED_ASMLOADERROR=				błąd podczas ładowania pliku składowego modyfikacji
 	MODOPTIONS_COREMODULE_YAMLERRORS=						Ładowanie niektórych plików everest.yaml nie powiodło się.
 
-	MODOPTIONS_COREMODULE_SEARCHBOX_PLACEHOLDER=				Aby przejść do następnego wyniku, wćiśnij 'Tab' lub 'Enter'
+	MODOPTIONS_COREMODULE_SEARCHBOX_PLACEHOLDER=				Aby przejść do następnego wyniku, wciśnij 'Tab' lub 'Enter'
 
 	MODOPTIONS_VANILLATRISTATE_NEVER=						NIGDY
 	MODOPTIONS_VANILLATRISTATE_EVEREST=						EVEREST
@@ -295,7 +295,7 @@
 	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE1=	Kiedy włączysz moda, wszystkie jego zależności zostaną włączone.
 	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE2=	Kiedy wyłączysz moda, wszystkie mody które zależą od niego zostaną wyłączone.
 	MODOPTIONS_MODTOGGLE_PROTECTFAVORITES=			Ulubione Mody
-	MODOPTIONS_MODTOGGLE_PROTECTFAVORITES_MESSAGE=		Wćiśnij {0}, aby dodać lub usunąć mody z listy ulubionych.
+	MODOPTIONS_MODTOGGLE_PROTECTFAVORITES_MESSAGE=		Wciśnij {0}, aby dodać lub usunąć mody z listy ulubionych.
 	MODOPTIONS_MODTOGGLE_MESSAGE_1=				Jeśli włączysz lub wyłączysz mody, twój blacklist.txt zostanie zaktualizowany,
 	MODOPTIONS_MODTOGGLE_MESSAGE_2=				a Celeste zostanie uruchomiony ponownie by zastosować zmiany.
 	MODOPTIONS_MODTOGGLE_MESSAGE_3=				Podświetlone mody są zależnościami innych modów.
@@ -306,7 +306,7 @@
 	MODOPTIONS_MODTOGGLE_ZIPS=					Pliki Zip
 	MODOPTIONS_MODTOGGLE_DIRECTORIES=			Foldery
 	MODOPTIONS_MODTOGGLE_BINS=					Pliki Binarne Map
-	MODOPTIONS_MODTOGGLE_SEARCHBOX_PLACEHOLDER=		Aby przejść do następnego wyniku, wćiśnij 'Tab' lub 'Enter'
+	MODOPTIONS_MODTOGGLE_SEARCHBOX_PLACEHOLDER=		Aby przejść do następnego wyniku, wciśnij 'Tab' lub 'Enter'
 
 # Asset Reload Helper // Pomocnik Odświeżania Zasobów
 	ASSETRELOADHELPER_RELOADINGMAP=				Odświeżanie mapy
