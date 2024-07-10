@@ -22,6 +22,13 @@
 	POSTCARD_LEVELGONE= 		{big}Entschuldigung ((player)),{n}{/big}aber {#ff1144}((sid)){#} konnte nicht gefunden werden.
 	POSTCARD_LEVELLOADFAILED= 	{big}Entschuldigung!{/big}{n}Aber {#ff1144}((sid)){#} konnte nicht geladen werden.{n}Schicke bitte {#44adf7}log.txt{#}{n}an den Map-Ersteller.
 	POSTCARD_LEVELNOSPAWN= 		{big}Ups!{/big}{n}Jemand hat deinen {#44adf7}Startpunkt{#}falsch platziert!{n}Überprüfe bitte, ob deine Map{n}ein {#44adf7}Player{#}-Objekt enthält.
+	POSTCARD_BADTILEID=			{big}Ups!{/big}{n}Die undefinierte ((type))-Tile-ID {#ff1144}((id)){#} wird auf{n}{#ff1144}(((x)), ((y))){#} im Raum {#ff1144}((room)){#} verwendet.{n}Schaue in deine {#44adf7}log.txt{#} für mehr Infos.
+	POSTCARD_DECALREGERROR=		{big}Ups!{/big}{n}Beim Anwenden der {n}{#ff1144}((property)){#}-Eigenschaft auf {#ff1144}((decal)){#}{n} ist ein Fehler aufgetreten.{n}Du hast vermutlich ein fehlendes oder ungültiges Attribut in deiner {#44adf7}Decal Registry{#}.
+	POSTCARD_MISSINGTUTORIAL=	{big}Ups!{/big}{n}Das Playback-Tutorial {#ff1144}((tutorial)){#} konnte nicht gefunden werden.{n}Schaue in deine {#44adf7}log.txt{#} für mehr Infos.
+	POSTCARD_TILEXMLERROR=		{big}Ups!{/big}{n}Beim Parsen eines Tilesets in {#ff1144}((path)){#} ist ein Fehler aufgetreten.{n}Schaue in deine {#44adf7}log.txt{#} für mehr Infos.
+	POSTCARD_XMLERROR=			{big}Ups!{/big}{n}{#ff1144}((path)){#} hat einen Syntaxfehler.{n}Schaue in deine {#44adf7}log.txt{#} für mehr Infos.
+	POSTCARD_BOSSLASTNODEHIT=	{big}Ups!{/big}{n}Ein {#ff1144}Badeline Boss{#}-Objekt wurde an der letzten Position berührt. Füge eine weitere Position außerhalb des Raums hinzu, die nie berührt werden kann.
+	POSTCARD_LEVELNOROOMS=		{big}Ups!{/big}{n}Diese Map hat {#f94a4a}keine Räume{#}!{n}Stelle sicher, dass deine Map {n}{#44adf7}mindestens einen Raum{#} hat{n} und dass du sie gespeichert hast.
 
 # Main Menu
 	MENU_TITLETOUCH= 		TOUCH
@@ -92,12 +99,12 @@
 	MODOPTIONS_COREMODULE_USEKEYBOARDFORTEXTINPUT=			Tastatur für Texteingabe benutzen
 	MODOPTIONS_COREMODULE_WARNONEVERESTYAMLERRORS=			Bei everest.yaml-Fehlern warnen
 	MODOPTIONS_COREMODULE_WARNONEVERESTYAMLERRORS_DESC=		Nützlich für Modersteller
-	MODOPTIONS_COREMODULE_DISCORDRICHPRESENCE=				Discord Rich Presence
 	MODOPTIONS_COREMODULE_MENUNAV_SUBHEADER=				MENÜNAVIGATION
 	MODOPTIONS_COREMODULE_MENUPAGEUP=						Bild auf in Menüs
 	MODOPTIONS_COREMODULE_MENUPAGEDOWN=						Bild ab in Menüs
 	MODOPTIONS_COREMODULE_DEBUGMODE_SUBHEADER=				DEBUG-MODUS
-	MODOPTIONS_COREMODULE_DEBUGCONSOLE=						Debug-Konsole
+	MODOPTIONS_COREMODULE_TOGGLEDEBUGCONSOLE=				Debug-Konsole öffnen/schließen
+	MODOPTIONS_COREMODULE_DEBUGCONSOLE=						Debug-Konsole öffnen
 	MODOPTIONS_COREMODULE_DEBUGMAP=							Debug-Karte
 	MODOPTIONS_COREMODULE_MOUNTAINCAM_SUBHEADER=			OBERWELT-BERGKAMERA
 	MODOPTIONS_COREMODULE_CAMERAFORWARD=					Kamera vorwärts
@@ -108,17 +115,29 @@
 	MODOPTIONS_COREMODULE_CAMERADOWN=						Kamera runter
 	MODOPTIONS_COREMODULE_CAMERASLOW=						Kamera verlangsamen
 	MODOPTIONS_COREMODULE_CAMERAPRINT=						Kameraposition loggen
-	MODOPTIONS_COREMODULE_TOGGLEMOUNTAINFREECAM=			Freie Kamera umschalten
+	MODOPTIONS_COREMODULE_TOGGLEMOUNTAINFREECAM=			Freie Kamera (de)aktivieren
 
 	MODOPTIONS_COREMODULE_SOUNDTEST= 						Audio-Test
 	MODOPTIONS_COREMODULE_OOBE= 							Anfängliches Einrichten wiederholen
 	MODOPTIONS_COREMODULE_TOGGLEMODS=						Mods aktivieren oder deaktivieren
+
+    MODOPTIONS_COREMODULE_DISCORDRICHPRESENCE=				Discord Rich Presence
+    MODOPTIONS_COREMODULE_DISCORDRICHPRESENCEOPTIONS=		Rich-Presence-Optionen
+    MODOPTIONS_COREMODULE_DISCORDSHOWICON=					Icon anzeigen
+    MODOPTIONS_COREMODULE_DISCORDSHOWMAP=					Map anzeigen
+    MODOPTIONS_COREMODULE_DISCORDSHOWSIDE=					Seite (A, B...) anzeigen
+    MODOPTIONS_COREMODULE_DISCORDSHOWROOM=					Raumname anzeigen
+    MODOPTIONS_COREMODULE_DISCORDSHOWBERRIES=				Beerenanzahl anzeigen
+    MODOPTIONS_COREMODULE_DISCORDSHOWDEATHS=				Todesanzahl anzeigen
+    MODOPTIONS_COREMODULE_DISCORDFAILED=					Verbindung mit Discord fehlgeschlagen.{n}Schalte diese Option aus und wieder an,{n}um es erneut zu versuchen.
 
 	MODOPTIONS_COREMODULE_NOTLOADED_A= 						Einige Mods konnten nicht geladen werden.
 	MODOPTIONS_COREMODULE_NOTLOADED_B= 						Bitte überprüfe log.txt für mehr Informationen.
 	MODOPTIONS_COREMODULE_NOTLOADED_NOTFOUND= 				{0} nicht gefunden
 	MODOPTIONS_COREMODULE_NOTLOADED_ASMLOADERROR=			Mod-Assembly konnte nicht geladen werden
 	MODOPTIONS_COREMODULE_YAMLERRORS= 						Einige everest.yaml-Dateien konnten nicht geladen werden.
+	
+	MODOPTIONS_COREMODULE_SEARCHBOX_PLACEHOLDER=			Drücke 'Tab' oder 'Enter', um zum nächsten Treffer zu scrollen
 
 	MODOPTIONS_VANILLATRISTATE_NEVER=						AUS
 	MODOPTIONS_VANILLATRISTATE_EVEREST=						EVEREST
@@ -157,6 +176,16 @@
 	UPDATER_VERSIONS_WAIT_REQUEST=	Warte auf Versionsliste...
 	UPDATER_VERSIONS_ERR_DOWNLOAD= 	Versionsliste konnte nicht heruntergeladen werden.
 	UPDATER_VERSIONS_ERR_FORMAT= 	Unbekanntes Format.
+	
+    UPDATER_CURRENT_BRANCH=			Aktueller Zweig
+
+    UPDATER_SRC_STABLE=				STABIL
+    UPDATER_SRC_BETA=				BETA
+    UPDATER_SRC_DEV=				DEV
+    UPDATER_SRC_CORE=				CORE
+
+    UPDATER_SRC_RELEASE_GITHUB=		Getaggte Releases (GitHub)
+    UPDATER_SRC_BUILDBOT_AZURE=		Automatische Builds (Azure)
 	
 	UPDATER_SRC_BUILDBOT= 			Automatische Builds
 	
@@ -199,7 +228,10 @@
 	MODUPDATECHECKER_UPDATE_ALL=	Alle Mods updaten
 	MODUPDATECHECKER_UPDATE_ALL_INPROGRESS=	Update alle Mods...
 	MODUPDATECHECKER_UPDATE_ALL_DONE=	Alle Mods wurden geupdatet.
+    MODUPDATECHECKER_RESTARTNEEDED= Celeste muss neugestartet werden, um fortzufahren
+    MODUPDATECHECKER_MENU_HEADER_RESTART= Wähle eine Aktion
 	MODUPDATECHECKER_SHUTDOWN= Beenden
+	MODUPDATECHECKER_RESTART= Neu starten
 	
 	
 # Auto Mod Updater
@@ -258,21 +290,24 @@
 	OOBE_SETTINGS_OK=			OK
 
 # Mod Toggle Menu
-	MODOPTIONS_MODTOGGLE=				MODS EIN- UND AUSSCHALTEN
-	MODOPTIONS_MODTOGGLE_LOADING=		Lade Mod-Informationen...
-	MODOPTIONS_MODTOGGLE_TOGGLEDEPS=	Benötigte Mods automatisch ein- und ausschalten
-	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE1=	Wenn du eine Mod aktivierst, werden automatisch alle benötigten Mods aktiviert.
-	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE2=	Wenn du eine Mod deaktivierst, werden automatisch alle abhängigen Mods deaktiviert.
-	MODOPTIONS_MODTOGGLE_MESSAGE_1=		Wenn du Mods aktivierst oder deaktivierst, wird blacklist.txt ersetzt
-	MODOPTIONS_MODTOGGLE_MESSAGE_2=		und Celeste startet neu, um die Änderungen zu übernehmen.
-	MODOPTIONS_MODTOGGLE_MESSAGE_3=		Hervorgehobene Mods werden von anderen aktivierten Mods benötigt.
-	MODOPTIONS_MODTOGGLE_WHITELISTWARN= Deaktiviere deine Whitelist, um diese Einstellungen korrekt zu übernehmen.
-	MODOPTIONS_MODTOGGLE_ENABLEALL=		Alle aktivieren
-	MODOPTIONS_MODTOGGLE_DISABLEALL=	Alle deaktivieren
-	MODOPTIONS_MODTOGGLE_CANCEL=		Abbrechen
-	MODOPTIONS_MODTOGGLE_ZIPS=			Zip-Dateien
-	MODOPTIONS_MODTOGGLE_DIRECTORIES=	Verzeichnisse
-	MODOPTIONS_MODTOGGLE_BINS=			Bin-Dateien
+	MODOPTIONS_MODTOGGLE=				            MODS EIN- UND AUSSCHALTEN
+	MODOPTIONS_MODTOGGLE_LOADING=		            Lade Mod-Informationen...
+	MODOPTIONS_MODTOGGLE_TOGGLEDEPS=	            Benötigte Mods automatisch ein- und ausschalten
+	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE1=	    Wenn du eine Mod aktivierst, werden automatisch alle benötigten Mods aktiviert.
+	MODOPTIONS_MODTOGGLE_TOGGLEDEPS_MESSAGE2=	    Wenn du eine Mod deaktivierst, werden automatisch alle abhängigen Mods deaktiviert.
+    MODOPTIONS_MODTOGGLE_PROTECTFAVORITES=			Favoriten nicht deaktivieren
+   	MODOPTIONS_MODTOGGLE_PROTECTFAVORITES_MESSAGE=	Drücke {0}, um Mods zur Favoritenliste hinzuzufügen oder davon zu entfernen.
+	MODOPTIONS_MODTOGGLE_MESSAGE_1=		            Wenn du Mods aktivierst oder deaktivierst, wird blacklist.txt ersetzt
+	MODOPTIONS_MODTOGGLE_MESSAGE_2=		            und Celeste startet neu, um die Änderungen zu übernehmen.
+	MODOPTIONS_MODTOGGLE_MESSAGE_3=		            Hervorgehobene Mods werden von anderen aktivierten Mods benötigt.
+	MODOPTIONS_MODTOGGLE_WHITELISTWARN=             Deaktiviere deine Whitelist, um diese Einstellungen korrekt zu übernehmen.
+	MODOPTIONS_MODTOGGLE_ENABLEALL=		            Alle aktivieren
+	MODOPTIONS_MODTOGGLE_DISABLEALL=	            Alle deaktivieren
+	MODOPTIONS_MODTOGGLE_CANCEL=		            Abbrechen
+	MODOPTIONS_MODTOGGLE_ZIPS=			            Zip-Dateien
+	MODOPTIONS_MODTOGGLE_DIRECTORIES=	            Verzeichnisse
+	MODOPTIONS_MODTOGGLE_BINS=			            Bin-Dateien
+	MODOPTIONS_MODTOGGLE_SEARCHBOX_PLACEHOLDER=		Drücke 'Tab' oder 'Enter', um zum nächsten Treffer zu scrollen
 
 # Asset Reload Helper
 	ASSETRELOADHELPER_RELOADINGMAP=			Lade Map neu
