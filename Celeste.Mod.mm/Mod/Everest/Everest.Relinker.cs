@@ -195,6 +195,7 @@ namespace Celeste.Mod {
                     RelinkMap = new Dictionary<string, object>(SharedRelinkMap),
 
                     AssemblyResolver = meta.AssemblyContext,
+                    MissingDependencyThrow = false
                 };
                 try {
                     InitMMFlags(modder);
