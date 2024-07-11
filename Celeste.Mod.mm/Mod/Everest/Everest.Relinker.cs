@@ -16,7 +16,7 @@ namespace Celeste.Mod {
         /// <summary>
         /// Relink mods to point towards Celeste.exe and FNA / XNA properly and to patch older mods to make them remain compatible.
         /// </summary>
-        internal static class Relinker {
+        public static class Relinker {
 
             /// <summary>
             /// The current Celeste.exe's checksum.
@@ -105,7 +105,7 @@ namespace Celeste.Mod {
             /// <param name="symPath">The path of the assembly's symbols inside of mod, or null</param>
             /// <param name="streamOpener">A callback opening Streams for the assembly and (optionally) its symbols</param>
             /// <returns>The loaded, relinked assembly.</returns>
-            public static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, string asmname, string path, string symPath, Func<(Stream stream, Stream symStream)> streamOpener) {
+            internal static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, string asmname, string path, string symPath, Func<(Stream stream, Stream symStream)> streamOpener) {
                 lock (RelinkerLock) {
                     // Determine cache paths
                     string cachePath = GetCachedPath(meta, asmname);
