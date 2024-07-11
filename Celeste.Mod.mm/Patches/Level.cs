@@ -613,8 +613,6 @@ namespace Celeste {
 
         private bool _IsInDoNotLoadIncreased(LevelData level, EntityData entity) => Session.DoNotLoad.Contains(new EntityID(level.Name, entity.ID + 20000000));
 
-        [ThreadStatic]
-        internal static bool _isLoadingTriggers;
     }
 
     public static class LevelExt {
