@@ -5,6 +5,7 @@ using Mono.Cecil;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -147,6 +148,29 @@ namespace Celeste.Mod {
         }
 
         /// <summary>
+        /// Calculates the checksums used to cache the assembly in any relevant
+        /// caches (like the relinker cache), and adds them to the given list.
+        /// Note that said checksums must not necessarily be unique!
+        /// </summary>
+        /// <param name="checksums">The list to add the calculated checksums to</param>
+        /// <param name="path">The path of the assembly inside of the mod</param>
+        /// <param name="symPath">The path of the assembly's symbols inside of mod, or null</param>
+        public void CalcAssemblyCacheChecksums(List<string> checksums, string path, string symPath) {
+            if (!string.IsNullOrEmpty(ModuleMeta.PathArchive)) {
+                // We can just use the mod's entire hash for the checksum
+                // This removes the need to read in the assemblies for checksum calculation
+                checksums.Add(ModuleMeta.Hash.ToHexadecimalString());
+            } else if (!string.IsNullOrEmpty(ModuleMeta.PathDirectory)) {
+                // There's no overhead for accessing the files of directory mods, so just calculate the checksum directly
+                checksums.Add(Everest.GetChecksum(path).ToHexadecimalString());
+
+                if (symPath != null)
+                    checksums.Add(Everest.GetChecksum(symPath).ToHexadecimalString());
+            } else
+                throw new UnreachableException();
+        }
+
+        /// <summary>
         /// Tries to load an assembly from a given path inside the mod.
         /// This path is an absolute path if the the mod was loaded from a directory, or a path into the mod ZIP otherwise.
         /// </summary>
@@ -185,19 +209,25 @@ namespace Celeste.Mod {
 
                             string symEntryPath = Path.ChangeExtension(osSepPath, ".pdb").Replace(Path.DirectorySeparatorChar, '/');
                             ZipEntry symEntry = zip.Entries.FirstOrDefault(entry => entry.FileName == symEntryPath);
+                            if (symEntry == null)
+                                symEntryPath = null;
+
+                            (Stream stream, Stream symStream) StreamOpener() => (entry.ExtractStream(), symEntry?.ExtractStream());
 
                             if (entry != null)
-                                using (Stream stream = entry.ExtractStream())
-                                using (Stream symStream = symEntry?.ExtractStream())
-                                    asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, stream, symStream);
+                                asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, entryPath, symEntryPath, StreamOpener);
                         }
                     else if (!string.IsNullOrEmpty(ModuleMeta.PathDirectory)) {
                         string symPath = Path.ChangeExtension(path, ".pdb");
-                        if (File.Exists(path))
-                            using (Stream stream = File.OpenRead(path))
-                            using (Stream symStream = File.Exists(symPath) ? File.OpenRead(symPath) : null)
-                                asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, stream, symStream);
-                    }
+                        if (!File.Exists(symPath))
+                            symPath = null;
+
+                        (Stream stream, Stream symStream) StreamOpener() => (File.OpenRead(path), symPath != null ? File.OpenRead(symPath) : null);
+
+                        if (File.Exists(osSepPath))
+                            asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, path, symPath, StreamOpener);
+                    } else
+                        throw new UnreachableException();
                 } finally {
                     _ActiveLocalLoadContexts = prevCtxs;
                 }
@@ -554,7 +584,8 @@ namespace Celeste.Mod {
                     // For unzipped mods, we can simply load directly from the file system
                     if (NativeLibrary.TryLoad(Path.Combine(_ModAsmDir, UnmanagedLibraryFolder, libName), out IntPtr handle))
                         return handle;
-                }
+                } else
+                throw new UnreachableException();
             }
 
             return IntPtr.Zero;

@@ -16,12 +16,7 @@ namespace Celeste.Mod {
         /// <summary>
         /// Relink mods to point towards Celeste.exe and FNA / XNA properly and to patch older mods to make them remain compatible.
         /// </summary>
-        public static class Relinker {
-
-            /// <summary>
-            /// The hasher used by Relinker.
-            /// </summary>
-            public readonly static HashAlgorithm ChecksumHasher = MD5.Create();
+        internal static class Relinker {
 
             /// <summary>
             /// The current Celeste.exe's checksum.
@@ -102,68 +97,16 @@ namespace Celeste.Mod {
             private static Dictionary<string, object> _SharedRelinkMap;
 
             /// <summary>
-            /// Relink a mod .dll, then load it.
-            /// </summary>
-            /// <param name="meta">The mod metadata, used for caching, among other things.</param>
-            /// <param name="stream">The stream to read the .dll from.</param>
-            /// <param name="depResolver">An optional dependency resolver.</param>
-            /// <param name="checksumsExtra">Any optional checksums</param>
-            /// <param name="prePatch">An optional step executed before patching, but after MonoMod has loaded the input assembly.</param>
-            /// <returns>The loaded, relinked assembly.</returns>
-            [Obsolete("Use the variant with an explicit assembly name instead.")]
-            public static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, Stream stream,
-                MissingDependencyResolver depResolver = null, string[] checksumsExtra = null, Action<MonoModder> prePatch = null)
-                => GetRelinkedAssembly(meta, Path.GetFileNameWithoutExtension(meta.DLL), stream, depResolver, checksumsExtra, prePatch);
-
-            /// <summary>
             /// Relink a .dll to point towards Celeste.exe and FNA / XNA properly at runtime, then load it.
             /// </summary>
             /// <param name="meta">The mod metadata, used for caching, among other things.</param>
             /// <param name="asmname"></param>
-            /// <param name="stream">The stream to read the .dll from.</param>
-            /// <param name="depResolver">An optional dependency resolver.</param>
-            /// <param name="checksumsExtra">Any optional checksums</param>
-            /// <param name="prePatch">An optional step executed before patching, but after MonoMod has loaded the input assembly.</param>
+            /// <param name="path">The path of the assembly inside of the mod</param>
+            /// <param name="symPath">The path of the assembly's symbols inside of mod, or null</param>
+            /// <param name="streamOpener">A callback opening Streams for the assembly and (optionally) its symbols</param>
             /// <returns>The loaded, relinked assembly.</returns>
-            public static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, string asmname, Stream stream,
-                MissingDependencyResolver depResolver = null, string[] checksumsExtra = null, Action<MonoModder> prePatch = null)
-                => GetRelinkedAssembly(meta, asmname, stream, null, depResolver, checksumsExtra, prePatch);
-
-            /// <summary>
-            /// Relink a .dll to point towards Celeste.exe and FNA / XNA properly at runtime, then load it.
-            /// </summary>
-            /// <param name="meta">The mod metadata, used for caching, among other things.</param>
-            /// <param name="asmname"></param>
-            /// <param name="stream">The stream to read the .dll from.</param>
-            /// <param name="symStream">The stream to read the .dll debug symbols from (or null if there are no symbols).</param>
-            /// <param name="depResolver">An optional dependency resolver.</param>
-            /// <param name="checksumsExtra">Any optional checksums</param>
-            /// <param name="prePatch">An optional step executed before patching, but after MonoMod has loaded the input assembly.</param>
-            /// <returns>The loaded, relinked assembly.</returns>
-            public static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, string asmname, Stream stream, Stream symStream,
-                MissingDependencyResolver depResolver = null, string[] checksumsExtra = null, Action<MonoModder> prePatch = null) {
+            public static Assembly GetRelinkedAssembly(EverestModuleMetadata meta, string asmname, string path, string symPath, Func<(Stream stream, Stream symStream)> streamOpener) {
                 lock (RelinkerLock) {
-                    // Write the streams to a temporary file if it isn't a file stream
-                    string inPath;
-                    if (stream is FileStream fs)
-                        inPath = fs.Name;
-                    else {
-                        inPath = Path.GetTempFileName();
-                        using (FileStream tmpFs = File.OpenWrite(inPath))
-                            stream.CopyTo(tmpFs);
-                    }
-
-                    string inSymPath = null;
-                    if (symStream != null) {
-                        if (symStream is FileStream symFs)
-                            inSymPath = symFs.Name;
-                        else {
-                            inSymPath = Path.GetTempFileName();
-                            using (FileStream tmpFs = File.OpenWrite(inSymPath))
-                                symStream.CopyTo(tmpFs);
-                        }
-                    }
-
                     // Determine cache paths
                     string cachePath = GetCachedPath(meta, asmname);
                     string cacheChecksumPath = Path.ChangeExtension(cachePath, ".sum");
@@ -171,26 +114,31 @@ namespace Celeste.Mod {
                     Assembly asm = null;
 
                     // Try to load the assembly from the cache
-                    if (TryLoadCachedAssembly(meta, asmname, inPath, inSymPath, cachePath, cacheChecksumPath, checksumsExtra, out string[] checksums) is not Assembly cacheAsm) {
+                    if (TryLoadCachedAssembly(meta, asmname, path, symPath, cachePath, cacheChecksumPath, out string[] checksums) is not Assembly cacheAsm) {
                         // Delete cached files
                         File.Delete(cachePath);
                         File.Delete(cacheChecksumPath);
 
-                        try {
-                            // Relink the assembly                
-                            if (RelinkAssembly(meta, asmname, inPath, inSymPath, cachePath, depResolver, prePatch, out string tmpOutPath) is not Assembly relinkedAsm)
-                                return null;
-                            else
-                                asm = relinkedAsm;
+                        // Open the assembly streams
+                        (Stream stream, Stream symStream) = streamOpener();
+                        using (stream)
+                        using (symStream) {
+                            try {
+                                // Relink the assembly
+                                if (RelinkAssembly(meta, asmname, stream, symStream, cachePath, out string tmpOutPath) is not Assembly relinkedAsm)
+                                    return null;
+                                else
+                                    asm = relinkedAsm;
 
-                            // Write the checksums for the cached assembly to be loaded in the future
-                            // Skip this step if the relinker had to fall back to using a temporary output file
-                            if (tmpOutPath == null)
-                                File.WriteAllLines(cacheChecksumPath, checksums);
-                        } catch (Exception e) {
-                            Logger.Log(LogLevel.Warn, "relinker", $"Failed relinking {meta} - {asmname}");
-                            e.LogDetailed();
-                            return null;
+                                // Write the checksums for the cached assembly to be loaded in the future
+                                // Skip this step if the relinker had to fall back to using a temporary output file
+                                if (tmpOutPath == null)
+                                    File.WriteAllLines(cacheChecksumPath, checksums);
+                            } catch (Exception e) {
+                                Logger.Log(LogLevel.Warn, "relinker", $"Failed relinking {meta} - {asmname}");
+                                e.LogDetailed();
+                                return null;
+                            }
                         }
                     } else
                         asm = cacheAsm;
@@ -200,16 +148,13 @@ namespace Celeste.Mod {
                 }
             }
 
-            private static Assembly TryLoadCachedAssembly(EverestModuleMetadata meta, string asmName, string inPath, string inSymPath, string cachePath, string cacheChecksumsPath, string[] extraChecksums, out string[] curChecksums) {
+            private static Assembly TryLoadCachedAssembly(EverestModuleMetadata meta, string asmName, string inPath, string inSymPath, string cachePath, string cacheChecksumsPath, out string[] curChecksums) {
                 // Calculate checksums
+                // If the stream originates from a 
                 List<string> checksums = new List<string>();
                 checksums.Add(GameChecksum);
-                checksums.Add(Everest.GetChecksum(inPath).ToHexadecimalString());
-                if (inSymPath != null)
-                    checksums.Add(Everest.GetChecksum(inSymPath).ToHexadecimalString());
 
-                if (extraChecksums != null)
-                    checksums.AddRange(extraChecksums);
+                meta.AssemblyContext.CalcAssemblyCacheChecksums(checksums, inPath, inSymPath);
 
                 curChecksums = checksums.ToArray();
 
@@ -232,49 +177,47 @@ namespace Celeste.Mod {
                 }
             }
 
-            private static Assembly RelinkAssembly(EverestModuleMetadata meta, string asmname, string inPath, string inSymPath, string outPath, MissingDependencyResolver depResolver, Action<MonoModder> prePatch, out string tmpOutPath) {
+            private static Assembly RelinkAssembly(EverestModuleMetadata meta, string asmname, Stream stream, Stream symStream, string outPath, out string tmpOutPath) {
                 tmpOutPath = null;
 
-                // Check if the assembly name is on the blacklist
-                AssemblyName inAsmName = AssemblyName.GetAssemblyName(inPath);
-                if (EverestModuleAssemblyContext.AssemblyLoadBlackList.Contains(inAsmName.Name, StringComparer.OrdinalIgnoreCase)) {
-                    Logger.Log(LogLevel.Warn, "relinker", $"Attempted load of blacklisted assembly {meta} - {inAsmName}");
-                    return null;
-                }
-
-                // Ensure the runtime rules module is loaded
-                ModuleDefinition runtimeRulesMod = LoadRuntimeRulesModule();
+                // Streams must be seekable
+                EnsureStreamIsSeekable(ref stream);
+                EnsureStreamIsSeekable(ref symStream);
 
                 // Setup the MonoModder
                 // Don't dispose it, as it shares a ton of resources
                 MonoModder modder = new LoggedMonoModder() {
                     CleanupEnabled = false,
-                    InputPath = inPath,
+                    Input = stream,
                     OutputPath = outPath,
 
                     RelinkModuleMap = new Dictionary<string, ModuleDefinition>(SharedRelinkModuleMap),
                     RelinkMap = new Dictionary<string, object>(SharedRelinkMap),
 
                     AssemblyResolver = meta.AssemblyContext,
-                    MissingDependencyResolver = depResolver
                 };
                 try {
                     InitMMFlags(modder);
 
                     // Read and setup debug symbols (if they exist)
-                    using (FileStream symStream = inSymPath != null ? File.OpenRead(inSymPath) : null) {
-                        modder.ReaderParameters.ReadSymbols = symStream != null;
-                        modder.ReaderParameters.SymbolStream = symStream;
-                        modder.Read();
+                    modder.ReaderParameters.ReadSymbols = symStream != null;
+                    modder.ReaderParameters.SymbolStream = symStream;
+                    modder.Read();
+
+                    // Check if the assembly name is on the blacklist
+                    if (EverestModuleAssemblyContext.AssemblyLoadBlackList.Contains(modder.Module.Assembly.Name.Name, StringComparer.OrdinalIgnoreCase)) {
+                        Logger.Log(LogLevel.Warn, "relinker", $"Attempted load of blacklisted assembly {meta} - {modder.Module.Assembly.Name}");
+                        return null;
                     }
+
+                    // Ensure the runtime rules module is loaded
+                    ModuleDefinition runtimeRulesMod = LoadRuntimeRulesModule();
 
                     // Map assembly dependencies
                     modder.MapDependencies();
                     modder.MapDependencies(runtimeRulesMod);
 
                     // Patch the assembly
-                    prePatch?.Invoke(modder);
-
                     TypeDefinition runtimeRulesType = runtimeRulesMod.GetType("MonoMod.MonoModRules");
                     modder.ParseRules(runtimeRulesMod);
                     if (runtimeRulesType != null)
@@ -367,42 +310,10 @@ namespace Celeste.Mod {
             /// Get the cached path of a given mod's relinked .dll
             /// </summary>
             /// <param name="meta">The mod metadata.</param>
-            /// <returns>The full path to the cached relinked .dll</returns>
-            [Obsolete("Use the variant with an explicit assembly name instead.")]
-            public static string GetCachedPath(EverestModuleMetadata meta)
-                => GetCachedPath(meta, Path.GetFileNameWithoutExtension(meta.DLL));
-
-            /// <summary>
-            /// Get the cached path of a given mod's relinked .dll
-            /// </summary>
-            /// <param name="meta">The mod metadata.</param>
             /// <param name="asmname"></param>
             /// <returns>The full path to the cached relinked .dll</returns>
             public static string GetCachedPath(EverestModuleMetadata meta, string asmname)
                 => Path.Combine(Loader.PathCache, meta.Name + "." + asmname + ".dll");
-
-            /// <summary>
-            /// Get the checksum for a given mod's .dll or the containing .zip
-            /// </summary>
-            /// <param name="meta">The mod metadata.</param>
-            /// <returns>A checksum.</returns>
-            [Obsolete("Use meta.Hash instead.")]
-            public static string GetChecksum(EverestModuleMetadata meta) {
-                string path = meta.PathArchive;
-                if (string.IsNullOrEmpty(path))
-                    path = meta.DLL;
-                return GetChecksum(path);
-            }
-            /// <summary>
-            /// Get the checksum for a given file.
-            /// </summary>
-            /// <param name="path">The file path.</param>
-            /// <returns>A checksum.</returns>
-            [Obsolete("Use Everest.GetChecksum instead.")]
-            public static string GetChecksum(string path) {
-                using (FileStream fs = File.OpenRead(path))
-                    return ChecksumHasher.ComputeHash(fs).ToHexadecimalString();
-            }
 
             /// <summary>
             /// Determine if both checksum collections are equal.
@@ -417,6 +328,15 @@ namespace Celeste.Mod {
                     if (a[i].Trim() != b[i].Trim())
                         return false;
                 return true;
+            }
+
+            private static void EnsureStreamIsSeekable(ref Stream stream) {
+                if (stream == null || stream.CanSeek)
+                    return;
+
+                MemoryStream memStream = new MemoryStream();
+                stream.CopyTo(memStream);
+                stream = memStream;
             }
 
             [PatchInitMMFlags]
