@@ -27,7 +27,7 @@
 	POSTCARD_MISSINGTUTORIAL=	{big}Ups!{/big}{n}Samouczek playbackowy {#ff1144}((tutorial)){#} nie mógł być znaleziony.{n}Sprawdź swój {#44adf7}log.txt{#} by uzyskać więcej informacji.
 	POSTCARD_TILEXMLERROR=		{big}Ups!{/big}{n}Wystąpił błąd podczas analizowania zestawu kafelków w {#ff1144}((path)){#}{n}Sprawdź swój {#44adf7}log.txt{#} by uzyskać więcej informacji.
 	POSTCARD_XMLERROR=			{big}Ups!{/big}{n}{#ff1144}((path)){#} zawiera błąd składniowy.{n}Sprawdź swój {#44adf7}log.txt{#} by uzyskać więcej informacji.
-	POSTCARD_BOSSLASTNODEHIT=	{big}Ups!{/big}{n}Obiekt typu {#ff1144}Badeline Boss{#} został dotknięty na ostatnim punkcie. Proszę dodać nowy punkt poza obszarem pokoju, aby upewnić, że gracz nie może się do niego dostać
+	POSTCARD_BOSSLASTNODEHIT=	{big}Ups!{/big}{n}Obiekt typu {#ff1144}Badeline Boss{#} został dotknięty na ostatnim punkcie. Proszę dodać nowy punkt poza obszarem pokoju, aby upewnić, że gracz nie może się do niego dostać.
 	POSTCARD_LEVELNOROOMS=		{big}Ups!{/big}{n}Ta mapa {#f94a4a}nie ma pokoi{#}!{n}Proszę dodać co najmniej {#44adf7}jeden pokój{#},{n}i upewnić się, że plik mapy został zapisany. 
 
 # Main Menu // Menu Główne
@@ -46,7 +46,7 @@
 
 # Title Screen // Ekran Tytułowy
 	MENU_TITLESCREEN_RESTART_VANILLA=	Uruchamianie orig/Celeste.exe
-	MENU_TITLESCREEN_RESTART_VANILLA_SAVES_WARN= UWAGA: W wyniku limitacji systemu operacyjnego, pliki zapisu nie będą synchronizowane!
+	MENU_TITLESCREEN_RESTART_VANILLA_SAVES_WARN= UWAGA: Z powodu limitacji systemu plików, zapisane dane nie będą synchronizowane!
 	
 # Extra Key Mapping // Dodatkowe Przypisanie Klawiszy
 	KEY_CONFIG_ADDING=			NACIŚNIJ NASTĘPNY PRZYCISK DLA
@@ -61,7 +61,7 @@
 	MODOPTIONS_COREMODULE_DOWNLOADDEPS=						Zainstaluj brakujące Zależności
 	MODOPTIONS_COREMODULE_VERSIONLIST=						Zmiana wersji Everest
 	MODOPTIONS_COREMODULE_LEGACYREF=						Skonfiguruj instalację legacyRef
-	MODOPTIONS_COREMODULE_LEGACYREF_DESCR=						Wymagane aby budować modyfikacje kodu sprzed wersji .NET Core Everestu 
+	MODOPTIONS_COREMODULE_LEGACYREF_DESCR=						Wymagane aby budować modyfikacje kodu dla wersji Everest sprzed .NET Core
 	MODOPTIONS_COREMODULE_TITLE=							Rdzeń Everest
 	MODOPTIONS_COREMODULE_DEBUGMODE=						Tryb Debugowania
 	MODOPTIONS_COREMODULE_LAUNCHWITHFMODLIVEUPDATE=			Uruchamiaj z FMOD Live Update
@@ -82,14 +82,14 @@
 	MODOPTIONS_COREMODULE_COMPATMODE_NONE_DESCR_A=
 	MODOPTIONS_COREMODULE_COMPATMODE_NONE_DESCR_B=
 	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYXNA=				STARE XNA
-	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYXNA_DESCR_A=		Przywraca zachowanie starych wersji XNA, pozwalając na częstotliwość 61 klatek na sekundę
+	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYXNA_DESCR_A=		Przywraca błędne odświeżanie 61 kl/s, spowodowane przez XNA
 	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYXNA_DESCR_B=		PRZEZNACZONE TYLKO DLA UŻYTKOWNIKÓW DOTKNIĘTYCH PRZEZ TĄ USTERKĘ!
 	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYFNA=				STARE FNA
-	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYFNA_DESCR_A=		Przywraca zachowanie starych wersji FNA, polegające na dodatkowym opóźnieniu sterowania
+	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYFNA_DESCR_A=		Przywraca dodatkowe opóźnienie klawiszy, spowodowane przez stare wersje FNA
 	MODOPTIONS_COREMODULE_COMPATMODE_LEGACYFNA_DESCR_B=		PRZEZNACZONE TYLKO DLA UŻYTKOWNIKÓW PRZYZWYCZAJONYCH DO TEGO ZACHOWANIA!
 	MODOPTIONS_COREMODULE_COMPATMODE_INCOMPATIBLE=			Uwaga: Brak kompatybilności z oprogramowaniem twojej niemodyfikowanej instalacji!
 	MODOPTIONS_COREMODULE_D3D11EXCLUSIVEFULLSCREEN=			Tryb Ekskluzywnego Pełnego Ekranu
-	MODOPTIONS_COREMODULE_D3D11EXCLUSIVEFULLSCREEN_DESC=		Ma efekt na renderowaniu przy użyciu D3D11 na systemach Windows
+	MODOPTIONS_COREMODULE_D3D11EXCLUSIVEFULLSCREEN_DESC=		Dotyczy renderera D3D11 na systemach Windows
 	MODOPTIONS_COREMODULE_MAINMENUMODE=						Tryb Menu Głównego
 	MODOPTIONS_COREMODULE_MAINMENUMODE_=					VANILLA
 	MODOPTIONS_COREMODULE_MAINMENUMODE_ROWS=				RZĘDY
@@ -133,7 +133,7 @@
 	MODOPTIONS_COREMODULE_NOTLOADED_A=						Ładowanie niektórych modów nie powiodło się.
 	MODOPTIONS_COREMODULE_NOTLOADED_B=						Sprawdź swój log.txt by uzyskać więcej informacji.
 	MODOPTIONS_COREMODULE_NOTLOADED_NOTFOUND=				Nie znaleziono {0}
-	MODOPTIONS_COREMODULE_NOTLOADED_ASMLOADERROR=				błąd podczas ładowania pliku składowego modyfikacji
+	MODOPTIONS_COREMODULE_NOTLOADED_ASMLOADERROR=				błąd podczas ładowania biblioteki modyfikacji
 	MODOPTIONS_COREMODULE_YAMLERRORS=						Ładowanie niektórych plików everest.yaml nie powiodło się.
 
 	MODOPTIONS_COREMODULE_SEARCHBOX_PLACEHOLDER=				Aby przejść do następnego wyniku, wciśnij 'Tab' lub 'Enter'
@@ -205,7 +205,7 @@
 	EVERESTUPDATER_EXTRACTIONFINISHED=		Wypakowywanie zakończone.
 	EVERESTUPDATER_RESTARTING=				Ponowne uruchamianie
 	EVERESTUPDATER_RESTARTINGIN=			Ponowne uruchamianie za {0}
-	EVERESTUPDATER_WAITFORINSTALLER=		Czekam na dokończenie instalacji
+	EVERESTUPDATER_WAITFORINSTALLER=		Oczekiwanie na zakończenie instalacji
 	EVERESTUPDATER_INSTALLERFAILED=			Instalacja nie powiodła się: kod wyjścia {0}
 	EVERESTUPDATER_STARTINGFAILED=			Uruchomienie instalatora nie powiodło się!
 	EVERESTUPDATER_ERRORHINT1=				Prosimy o zgłoszenie tego błędu na GitHub @ https://github.com/EverestAPI/Everest
@@ -228,7 +228,7 @@
 	MODUPDATECHECKER_UPDATE_ALL=			Zaktualizuj wszystkie mody
 	MODUPDATECHECKER_UPDATE_ALL_INPROGRESS=	Aktualizowanie wszystkich modów...
 	MODUPDATECHECKER_UPDATE_ALL_DONE=		Wszystkie mody zostały zaktualizowane.
-	MODUPDATECHECKER_RESTARTNEEDED= 		Aby kontynuować, Celeste musi być ponownie uruchomione
+	MODUPDATECHECKER_RESTARTNEEDED= 		Aby kontynuować, Celeste musi być uruchomione ponownie
 	MODUPDATECHECKER_MENU_HEADER_RESTART= 		Wybierz czynność
 	MODUPDATECHECKER_SHUTDOWN= 			Wyjdź
 	MODUPDATECHECKER_RESTART= 			Uruchom ponownie
