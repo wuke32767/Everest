@@ -119,19 +119,21 @@ namespace Celeste.Mod {
             // Unload all assemblies loaded in the context
             // Do this before setting isDisposed, as the EverestModule Unload function may trigger assembly loads
             // Because of this, we also have to do this really cursed method of unloading assemblies, since the `Assemblies` collection may be modified :/
-            HashSet<AssemblyName> unloadedAsms = new HashSet<AssemblyName>();
+            HashSet<string> unloadedAsms = new HashSet<string>();
+            static string GetAssemblyName(Assembly asm) => asm.FullName ?? $"{asm.ToString()}@{asm.GetHashCode()}";
+
             while (true) {
                 // Find an assembly to unload
                 Assembly asm;
                 lock (LOCK)
-                    asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(asm.GetName()));
+                    asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(GetAssemblyName(asm)));
 
                 if (asm == null)
                     break;
 
                 // Unload the assembly
                 Everest.UnloadAssembly(ModuleMeta, asm);
-                unloadedAsms.Add(asm.GetName());
+                unloadedAsms.Add(GetAssemblyName(asm));
             }
 
             lock (LOCK) {
