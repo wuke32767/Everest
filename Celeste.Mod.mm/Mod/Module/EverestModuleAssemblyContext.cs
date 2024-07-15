@@ -106,6 +106,25 @@ namespace Celeste.Mod {
             lock (LOCK) {
                 if (isDisposed)
                     return;
+
+                // Unload all assemblies loaded in the context
+                // Do this before setting isDisposed, as the EverestModule Unload function may trigger assembly loads
+                // Because of this, we also have to do this really cursed method of unloading assemblies, since the `Assemblies` collection may be modified :/
+                HashSet<AssemblyName> unloadedAsms = new HashSet<AssemblyName>();
+                while (true) {
+                    // Find an assembly to unload
+                    Assembly asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(asm.GetName()));
+                    if (asm == null)
+                        break;
+
+                    // Unload the assembly
+                    Everest.UnloadAssembly(ModuleMeta, asm);
+                    unloadedAsms.Add(asm.GetName());
+                }
+
+                _LoadedAssemblies.Clear();
+
+                // *Now* we can set the disposed flag
                 isDisposed = true;
 
                 // Remove from mod ALC list
@@ -123,14 +142,10 @@ namespace Celeste.Mod {
                     watcher.Dispose();
                 _AssemblyReloadWatchers.Clear();
 
-                // Unload all assemblies loaded in the context
+                // Dispose all module definitions
                 foreach (ModuleDefinition module in _AssemblyModules.Values)
                     module.Dispose();
                 _AssemblyModules.Clear();
-
-                foreach (Assembly asm in Assemblies)
-                    Everest.UnloadAssembly(ModuleMeta, asm);            
-                _LoadedAssemblies.Clear();
     
                 _AssemblyLoadCache.Clear();
                 _LocalLoadCache.Clear();
