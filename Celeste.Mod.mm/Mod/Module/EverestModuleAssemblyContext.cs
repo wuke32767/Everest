@@ -68,7 +68,7 @@ namespace Celeste.Mod {
         private readonly ConcurrentDictionary<string, AssemblyDefinition> _LocalResolveCache = new ConcurrentDictionary<string, AssemblyDefinition>();
 
         private LinkedListNode<EverestModuleAssemblyContext> listNode;
-        private bool isDisposed = false;
+        private bool isDisposed = false, currentlyDisposing = false;
 
         internal EverestModuleAssemblyContext(EverestModuleMetadata meta) : base(meta.Name, true) {
             ModuleMeta = meta;
@@ -107,21 +107,34 @@ namespace Celeste.Mod {
                 if (isDisposed)
                     return;
 
-                // Unload all assemblies loaded in the context
-                // Do this before setting isDisposed, as the EverestModule Unload function may trigger assembly loads
-                // Because of this, we also have to do this really cursed method of unloading assemblies, since the `Assemblies` collection may be modified :/
-                HashSet<AssemblyName> unloadedAsms = new HashSet<AssemblyName>();
-                while (true) {
-                    // Find an assembly to unload
-                    Assembly asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(asm.GetName()));
-                    if (asm == null)
-                        break;
+                // We have to drop the lock now to unload all mod modules
+                // However, we want to avoid having two concurrent Dispose calls going on
+                // As such set a flag to indicate that we are currently tearing down the ALC
+                if (currentlyDisposing)
+                    return;
 
-                    // Unload the assembly
-                    Everest.UnloadAssembly(ModuleMeta, asm);
-                    unloadedAsms.Add(asm.GetName());
-                }
+                currentlyDisposing = true;
+            }
 
+            // Unload all assemblies loaded in the context
+            // Do this before setting isDisposed, as the EverestModule Unload function may trigger assembly loads
+            // Because of this, we also have to do this really cursed method of unloading assemblies, since the `Assemblies` collection may be modified :/
+            HashSet<AssemblyName> unloadedAsms = new HashSet<AssemblyName>();
+            while (true) {
+                // Find an assembly to unload
+                Assembly asm;
+                lock (LOCK)
+                    asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(asm.GetName()));
+
+                if (asm == null)
+                    break;
+
+                // Unload the assembly
+                Everest.UnloadAssembly(ModuleMeta, asm);
+                unloadedAsms.Add(asm.GetName());
+            }
+
+            lock (LOCK) {
                 _LoadedAssemblies.Clear();
 
                 // *Now* we can set the disposed flag
