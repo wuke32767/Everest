@@ -23,7 +23,7 @@ namespace Celeste {
         // Whether to apply the fix, see `PatchBirdPathUpdate`
         private bool angleFix = false;
         // Maximum rad/s turn speed, see `PatchBirdPathUpdate`
-        private float angleFixMaxRotation = 1;
+        private float angleFixMaxRotation = MathF.PI / 3; // Default to 60 deg second
         // If this entity is placed in a vanilla map we will forcibly disable all changes
         // Note that `angleFix` is false by default so that will also apply in vanilla
         private bool inVanilla = false;
@@ -46,7 +46,7 @@ namespace Celeste {
         public void ctor(EntityID id, EntityData data, Vector2 offset) {
             orig_ctor(id, data, offset);
             this.angleFix = data.Bool("angle_fix");
-            this.angleFixMaxRotation = data.Float("angle_fix_max_rotation_speed");
+            this.angleFixMaxRotation = MathF.Abs(data.Float("angle_fix_max_rotation_speed").ToRad());
         }
 
 #pragma warning disable CS0626
@@ -76,11 +76,7 @@ namespace Celeste {
             } else {
                 float maxTurnSpeed = angleFixMaxRotation * Engine.DeltaTime;
                 float newAngle = Calc.AngleLerp(this.speed.Angle(), oldAngle, 0.5F);
-                if (Calc.AbsAngleDiff(newAngle, oldAngle) > maxTurnSpeed) {
-                    oldAngle += maxTurnSpeed * -Calc.SignAngleDiff(newAngle, oldAngle);
-                } else {
-                    oldAngle = newAngle;
-                }
+                oldAngle = Calc.AngleApproach(oldAngle, newAngle, maxTurnSpeed);
             }
 
             return oldAngle + MathF.PI/2;
