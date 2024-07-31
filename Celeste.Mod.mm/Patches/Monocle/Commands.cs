@@ -118,7 +118,7 @@ namespace Monocle {
             MouseState mouseState = Mouse.GetState();
             int mouseScrollDelta = mouseState.ScrollWheelValue - mouseScroll;
             mouseScroll = mouseState.ScrollWheelValue;
-            Vector2 mousePosition = new Vector2(mouseState.X, mouseState.Y);
+            Vector2 mousePosition = new Vector2(mouseState.X - Engine.Viewport.X, mouseState.Y - Engine.Viewport.Y);
             Vector2? mouseSnapPosition = null;
 
             int maxCursorScale = 1;
