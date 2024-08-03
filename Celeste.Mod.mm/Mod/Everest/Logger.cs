@@ -149,13 +149,13 @@ namespace Celeste.Mod {
                 }
 
                 const string colorReset = "\x1b[0m";
-                const string colorFaint = "\x1b[2m"
+                const string colorFaint = "\x1b[2m";
                 string colorLevel = level.GetAnsiEscapeCodeForLevel();
                 string colorText = level.GetAnsiEscapeCodeForText();
 
                 string now_str = DateTime.Now.ToString(CultureInfo.InvariantCulture);
                 string level_str = level.FastToString();
-                outWriter.WriteLine($"${colorFaint}({now_str}) [Everest] {colorReset}{colorLevel}[{level_str}] [{tag}] {colorText}{str}{colorReset}");
+                outWriter.WriteLine($"{colorFaint}({now_str}) [Everest] {colorReset}{colorLevel}[{level_str}] [{tag}] {colorText}{str}{colorReset}");
                 logWriter.WriteLine($"({now_str}) [Everest] [{level_str}] [{tag}] {str}");
             }
         }
