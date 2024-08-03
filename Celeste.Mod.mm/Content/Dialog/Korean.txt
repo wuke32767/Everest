@@ -181,8 +181,6 @@
 	EVERESTUPDATER_RESTARTING=		다시 실행
 	EVERESTUPDATER_RESTARTINGIN=	{0}초 후 다시 실행
 	EVERESTUPDATER_STARTINGFAILED=	인스톨러 실행 실패!
-	EVERESTUPDATER_MISSINGRUNTIME_A=	.NET Core Everest를 설치하려면 .NET 7.0 런타임을 먼저 설치해야 합니다.
-	EVERESTUPDATER_MISSINGRUNTIME_B=	.NET 7.0 런타임은 이 곳에서 설치할 수 있습니다: {0}
 	EVERESTUPDATER_ERRORHINT1=		GitHub @ https://github.com/EverestAPI/Everest 에서 새로운 이슈를 작성하거나
 	EVERESTUPDATER_ERRORHINT2=		셀레스트 공식 디스코드의 #modding_help 채널에 방문해주세요(위의 리포지토리에서 참여 가능).
 	EVERESTUPDATER_ERRORHINT3=		log.txt를 잊지 말고 꼭 업로드해주세요.
@@ -227,7 +225,6 @@
 	DEPENDENCYDOWNLOADER_DONE=						완료.
 	DEPENDENCYDOWNLOADER_DOWNLOAD_DATABASE_FAILED=	에러: 데이터베이스 다운로드에 실패했습니다. 자세한 사항은 log.txt를 확인해주세요.
 	DEPENDENCYDOWNLOADER_MUST_UPDATE_EVEREST=		경고: 일부 모드를 구동하기 위해선 에버레스트를 업데이트해야 합니다. 에버레스트 버전 변경하기 메뉴에서 최신 버전을 설치해주세요.
-	DEPENDENCYDOWNLOADER_NEEDS_CORE_EVEREST=		WARNING: A (currently WIP) .NET Core build of Everest is required for some mods to load. Install it from the Change Everest Version menu.
 	DEPENDENCYDOWNLOADER_EVEREST_UPDATE=			일부 모드를 구동하기 위해 에버레스트는 {0}으로 업데이트 됩니다. 확인 버튼을 눌러 진행해주세요.
 	DEPENDENCYDOWNLOADER_MOD_NOT_FOUND=				에러: 데이터베이스에서 {0}을(를) 찾을 수 없습니다. 해당 모드는 수동으로 설치해주세요.
 	DEPENDENCYDOWNLOADER_UPDATE_CELESTE=			에러: 일부 모드를 구동하기 위해선 최신 버전의 셀레스트가 필요합니다. 셀레스트를 업데이트해주세요.

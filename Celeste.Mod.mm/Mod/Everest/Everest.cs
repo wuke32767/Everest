@@ -271,9 +271,9 @@ namespace Celeste.Mod {
                     Debugger.Launch();
                     
                 else if (arg == "--debugger-attach") {
-                    Logger.Log(LogLevel.Info, "Everest", "Waiting for debugger to attach...");
+                    Logger.Info("Everest", "Waiting for debugger to attach...");
                     while (!Debugger.IsAttached) { }
-                    Logger.Log(LogLevel.Info, "Everest", "Debugger attached");
+                    Logger.Info("Everest", "Debugger attached");
                 }
 
                 else if (arg == "--dump")
@@ -435,36 +435,19 @@ namespace Celeste.Mod {
             Assembly asm = typeof(CoreModule).Assembly;
             Type[] types = asm.GetTypesSafe();
             Loader.ProcessAssembly(core.Metadata, asm, types);
+            core.Metadata.RegisterMod();
 
             if (CoreModule.Settings.ColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
                 Logger.Error("core", "Failed to enalbe Windows VT support!");
             }
 
             // Note: Everest fulfills some mod dependencies by itself.
-            new NullModule(new EverestModuleMetadata() {
+            NullModule vanilla = new NullModule(new EverestModuleMetadata {
                 Name = "Celeste",
                 VersionString = $"{Celeste.Instance.Version.ToString()}-{(Flags.IsFNA ? "fna" : "xna")}"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "DialogCutscene",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "UpdateChecker",
-                VersionString = "1.0.2"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "InfiniteSaves",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "DebugRebind",
-                VersionString = "1.0.0"
-            }).Register();
-            new NullModule(new EverestModuleMetadata() {
-                Name = "RebindPeriod",
-                VersionString = "1.0.0"
-            }).Register();
+            });
+            vanilla.Register();
+            vanilla.Metadata.RegisterMod();
 
             LuaLoader.Initialize();
 
@@ -493,6 +476,15 @@ namespace Celeste.Mod {
 
             // Request the mod update list as well.
             ModUpdaterHelper.RunAsyncCheckForModUpdates(excludeBlacklist: true);
+
+            // Cleanup mod ALCs
+            EverestModuleAssemblyContext._AllContextsLock.EnterReadLock();
+            try {
+                foreach (EverestModuleAssemblyContext alc in EverestModuleAssemblyContext._AllContexts)
+                    alc.PostBootCleanup();
+            } finally {
+                EverestModuleAssemblyContext._AllContextsLock.ExitReadLock();
+            }
 
             DiscordSDK.LoadRichPresenceIcons();
         }
@@ -564,35 +556,8 @@ namespace Celeste.Mod {
                     LateInitializeModules(Enumerable.Repeat(module, 1));
             }
 
-            if (Engine.Instance != null && Engine.Scene is Overworld overworld) {
-                // we already are in the overworld. Register new Ouis real quick!
-                Type[] types = FakeAssembly.GetFakeEntryAssembly().GetTypesSafe();
-                foreach (Type type in types) {
-                    if (typeof(Oui).IsAssignableFrom(type) && !type.IsAbstract && !overworld.UIs.Any(ui => ui.GetType() == type)) {
-                        Logger.Verbose("core", $"Instantiating UI from {module.Metadata}: {type.FullName}");
-
-                        Oui oui = (Oui) Activator.CreateInstance(type);
-                        oui.Visible = false;
-                        overworld.Add(oui);
-                        overworld.UIs.Add(oui);
-                    }
-                }
-            }
-
-            InvalidateInstallationHash();
-
-            EverestModuleMetadata meta = module.Metadata;
-            meta.Hash = GetChecksum(meta);
-
-            // Audio banks are cached, and as such use the module's hash. We can only ingest those now.
-            if (patch_Audio.AudioInitialized) {
-                patch_Audio.IngestNewBanks();
-            }
-
             module.LogRegistration();
             Events.Everest.RegisterModule(module);
-
-            CheckDependenciesOfDelayedMods();
         }
 
         internal static void LateInitializeModules(IEnumerable<EverestModule> modules) {
@@ -734,7 +699,8 @@ namespace Celeste.Mod {
                                 } else {
                                     // all dependencies are loaded, all optional dependencies are either loaded or won't load => we're good to go!
                                     Logger.Info("core", $"Dependencies of mod {entry.Item1} are now satisfied: loading");
-
+                                    EverestSplashHandler.IncreaseLoadedModCount(entry.Item1.Name); // Notify the splash
+                                    
                                     if (Everest.Modules.Any(mod => mod.Metadata.Name == entry.Item1.Name)) {
                                         // a duplicate of the mod was loaded while it was sitting in the delayed list.
                                         Logger.Warn("core", $"Mod {entry.Item1.Name} already loaded!");

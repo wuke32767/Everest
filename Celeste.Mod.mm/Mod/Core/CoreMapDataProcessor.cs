@@ -60,6 +60,12 @@ namespace Celeste.Mod.Core {
                         }
 
                         // do checkpoint post-processing
+                        bool oneIndexed = false;
+                        if (!CheckpointsManual.ContainsKey(0) && CheckpointsManual.ContainsKey(1)) {
+                            // assume one-indexed checkpoints
+                            oneIndexed = true;
+                            CheckpointsAuto.Insert(0, null);
+                        }
                         for (int checkpoint = 0; checkpoint <= MaxManualCheckpoint; checkpoint++) {
                             if (!CheckpointsManual.TryGetValue(checkpoint, out CheckpointData data)) {
                                 continue;
@@ -67,9 +73,12 @@ namespace Celeste.Mod.Core {
                             if (checkpoint <= CheckpointsAuto.Count) {
                                 CheckpointsAuto.Insert(checkpoint, data);
                             } else {
-                                Logger.Log(LogLevel.Warn, "core", $"Checkpoint ID {checkpoint} exceeds checkpoint count in room {data.Level} of map {Mode.Path}. Reassigning checkpoint ID.");
+                                Logger.Warn("core", $"Checkpoint ID {checkpoint} exceeds checkpoint count in room {data.Level} of map {Mode.Path}. Reassigning checkpoint ID.");
                                 CheckpointsAuto.Add(data);
                             }
+                        }
+                        if (oneIndexed) {
+                            CheckpointsAuto.RemoveAt(0);
                         }
 
                         // do berry order post-processing
@@ -111,12 +120,13 @@ namespace Celeste.Mod.Core {
 
                             // assign berries with invalid checkpoint ID to final checkpoint
                             if (checkpoint > Checkpoint) {
-                                for (int i = 0; i <= MaximumBerryOrderPerCheckpoint[checkpoint]; i++) {
-                                    Logger.Log(LogLevel.Warn, "core", $"Invalid checkpoint ID {checkpoint} for berry in map {Mode.Path}. Reassigning to last checkpoint.");
-                                    BinaryPacker.Element berry = placedBerries[i];
+                                Logger.Warn("core", $"Invalid checkpoint ID {checkpoint} for berries in map {Mode.Path}. Reassigning to last checkpoint.");
+                                int order = MaximumBerryOrderPerCheckpoint.GetValueOrDefault(Checkpoint, -1);
+                                foreach (var placedBerry in placedBerries.OrderBy(kv => kv.Key)) {
+                                    BinaryPacker.Element berry = placedBerry.Value;
                                     berry.SetAttr("checkpointID", Checkpoint);
-                                    berry.SetAttr("order", MaximumBerryOrderPerCheckpoint[Checkpoint] + 1);
-                                    MaximumBerryOrderPerCheckpoint[Checkpoint]++;
+                                    berry.SetAttr("order", order + 1);
+                                    order++;
                                 }
                             }
                         }
@@ -234,7 +244,7 @@ namespace Celeste.Mod.Core {
                                     if (CheckpointsManual.TryAdd(id, c)) {
                                         MaxManualCheckpoint = Math.Max(MaxManualCheckpoint, id);
                                     } else {
-                                        Logger.Log(LogLevel.Warn, "core", $"Duplicate checkpoint ID {id} in room {LevelName} of map {Mode.Path}. Reassigning checkpoint ID.");
+                                        Logger.Warn("core", $"Duplicate checkpoint ID {id} in room {LevelName} of map {Mode.Path}. Reassigning checkpoint ID.");
                                         CheckpointsAuto.Add(c); // treat duplicate ID as -1
                                     }
                                 }
@@ -305,8 +315,7 @@ namespace Celeste.Mod.Core {
         }
 
         public override void End() {
-            if (Mode.Checkpoints == null)
-                Mode.Checkpoints = CheckpointsAuto.ToArray();
+            Mode.Checkpoints = CheckpointsAuto.ToArray();
 
             if (Mode != ParentMode) {
                 if (ParentMode.Checkpoints == null)

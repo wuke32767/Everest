@@ -259,7 +259,7 @@ namespace Celeste {
 
             logBuilder.Append('!');
 
-            Logger.Log(LogLevel.Warn, "Dialog", logBuilder.ToString());
+            Logger.Warn("Dialog", logBuilder.ToString());
         }
 
         // can't move the field higher up, else MonoMod causes a member name conflict in a compiler generated class

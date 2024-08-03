@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod.Utils;
 using System;
+using System.Collections.Immutable;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -32,11 +33,11 @@ namespace Celeste.Mod {
             /// The path to the Everest /Mods/blacklist.txt file.
             /// </summary>
             public static string PathBlacklist { get; internal set; }
-            internal static List<string> _Blacklist = new List<string>();
+            internal static HashSet<string> _Blacklist = new HashSet<string>();
             /// <summary>
             /// The currently loaded mod blacklist.
             /// </summary>
-            public static ReadOnlyCollection<string> Blacklist => _Blacklist?.AsReadOnly();
+            public static IReadOnlyCollection<string> Blacklist => _Blacklist.ToImmutableHashSet();
 
             /// <summary>
             /// The path to the Everest /Mods/favorites.txt file.
@@ -117,7 +118,7 @@ namespace Celeste.Mod {
 
                 PathBlacklist = Path.Combine(PathMods, "blacklist.txt");
                 if (File.Exists(PathBlacklist)) {
-                    _Blacklist = File.ReadAllLines(PathBlacklist).Select(l => (l.StartsWith("#") ? "" : l).Trim()).ToList();
+                    _Blacklist = File.ReadAllLines(PathBlacklist).Select(l => (l.StartsWith("#") ? "" : l).Trim()).ToHashSet<string>();
                 } else {
                     using (StreamWriter writer = File.CreateText(PathBlacklist)) {
                         writer.WriteLine("# This is the blacklist. Lines starting with # are ignored.");
@@ -176,27 +177,34 @@ namespace Celeste.Mod {
 
                 enforceOptionalDependencies = true;
 
-                string[] files = Directory.GetFiles(PathMods);
-                Array.Sort(files); //Prevent inode loading jank
-                for (int i = 0; i < files.Length; i++) {
-                    string file = Path.GetFileName(files[i]);
-                    if (!file.EndsWith(".zip") || !ShouldLoadFile(file))
-                        continue;
+                string[] files = Directory
+                    .GetFiles(PathMods)
+                    .OrderBy(f => f) //Prevent inode loading jank
+                    .Select(Path.GetFileName)
+                    .Where(file => file.EndsWith(".zip") && ShouldLoadFile(file))
+                    .ToArray();
+                   
+                string[] dirs = Directory
+                    .GetDirectories(PathMods)
+                    .OrderBy(f => f) //Prevent inode loading jank
+                    .Select(Path.GetFileName)
+                    .Where(file => file != "Cache" && ShouldLoadFile(file))
+                    .ToArray();
+
+                EverestSplashHandler.SetSplashLoadingModCount(files.Length + dirs.Length);
+
+                foreach (string file in files) {
                     LoadZip(Path.Combine(PathMods, file));
                 }
-
-                files = Directory.GetDirectories(PathMods);
-                Array.Sort(files); //Prevent inode loading jank
-                for (int i = 0; i < files.Length; i++) {
-                    string file = Path.GetFileName(files[i]);
-                    if (file == "Cache" || !ShouldLoadFile(file))
-                        continue;
-                    LoadDir(Path.Combine(PathMods, file));
+                foreach (string dir in dirs) {
+                    LoadDir(Path.Combine(PathMods, dir));
                 }
 
                 enforceOptionalDependencies = false;
                 Logger.Info("loader", "Loading mods with unsatisfied optional dependencies (if any)");
                 Everest.CheckDependenciesOfDelayedMods();
+
+                EverestSplashHandler.AllModsLoaded();
 
                 watch.Stop();
                 Logger.Verbose("loader", $"ALL MODS LOADED IN {watch.ElapsedMilliseconds}ms");
@@ -245,8 +253,10 @@ namespace Celeste.Mod {
 
                 if (!File.Exists(archive)) // Relative path? Let's just make it absolute.
                     archive = Path.Combine(PathMods, archive);
-                if (!File.Exists(archive)) // It just doesn't exist.
+                if (!File.Exists(archive)) { // It just doesn't exist.
+                    EverestSplashHandler.IncreaseLoadedModCount(null); // Increase the splash count anyway, since it was detected as an entry
                     return;
+                }
 
                 Logger.Verbose("loader", $"Loading mod .zip: {archive}");
 
@@ -313,6 +323,11 @@ namespace Celeste.Mod {
                 };
 
                 if (multimetas != null) {
+                    // When estimating the total mod count for the splash it is assumed that there will be exactly one
+                    // ModuleMetadata per filesystem entry, which is a valid assumption most of the time, but very few
+                    // mods do have multiple ModuleMetadatas in its everest.yaml, that's why we increase the total count
+                    // late here when we realize that one may contain multiple
+                    EverestSplashHandler.IncreaseTotalModCount(multimetas.Length-1);
                     foreach (EverestModuleMetadata multimeta in multimetas) {
                         multimeta.Multimeta = multimetas;
                         if (contentMetaParent == null)
@@ -343,8 +358,10 @@ namespace Celeste.Mod {
 
                 if (!Directory.Exists(dir)) // Relative path?
                     dir = Path.Combine(PathMods, dir);
-                if (!Directory.Exists(dir)) // It just doesn't exist.
+                if (!Directory.Exists(dir)) { // It just doesn't exist.
+                    EverestSplashHandler.IncreaseLoadedModCount(null); // Increase the splash count anyway, since it was detected as an entry
                     return;
+                }
 
                 Logger.Verbose("loader", $"Loading mod directory: {dir}");
 
@@ -393,6 +410,11 @@ namespace Celeste.Mod {
                 };
 
                 if (multimetas != null) {
+                    // When estimating the total mod count for the splash it is assumed that there will be exactly one
+                    // ModuleMetadata per filesystem entry, which is a valid assumption most of the time, but very few
+                    // mods do have multiple ModuleMetadatas in its everest.yaml, that's why we increase the total count
+                    // late here when we realize that one may contain multiple
+                    EverestSplashHandler.IncreaseTotalModCount(multimetas.Length-1);
                     foreach (EverestModuleMetadata multimeta in multimetas) {
                         multimeta.Multimeta = multimetas;
                         if (contentMetaParent == null)
@@ -454,6 +476,7 @@ namespace Celeste.Mod {
 
                 callback?.Invoke();
 
+                EverestSplashHandler.IncreaseLoadedModCount(meta.Name);
                 LoadMod(meta);
             }
 
@@ -476,19 +499,6 @@ namespace Celeste.Mod {
                 // Create an assembly context
                 meta.AssemblyContext ??= new EverestModuleAssemblyContext(meta);
 
-                // Try to load a Lua module
-                bool hasLuaModule = false;
-                if (!string.IsNullOrEmpty(meta.PathArchive))
-                    using (ZipFile zip = new ZipFile(meta.PathArchive))
-                        hasLuaModule = zip.ContainsEntry("main.lua");
-                else if (!string.IsNullOrEmpty(meta.PathDirectory))
-                    hasLuaModule = File.Exists(Path.Combine(meta.PathDirectory, "main.lua"));
-
-                if (hasLuaModule) {
-                    new LuaModule(meta).Register();
-                    return true;
-                }
-
                 // Try to load a module from a DLL
                 if (!string.IsNullOrEmpty(meta.DLL)) {
                     if (meta.AssemblyContext.LoadAssemblyFromModPath(meta.DLL) is not Assembly asm) {
@@ -498,11 +508,13 @@ namespace Celeste.Mod {
                     }
 
                     LoadModAssembly(meta, asm);
-                    return true;
+                    goto success;
                 }
 
                 // Register a null module for content mods.
                 new NullModule(meta).Register();
+                success:
+                meta.RegisterMod();
                 return true;
             }
 
@@ -760,11 +772,21 @@ namespace Celeste.Mod {
                             patch_MapData.BackdropLoaders[id] = loader;
                         }
                     }
+
+                    // we already are in the overworld. Register new Ouis real quick!
+                    if (Engine.Instance != null && Engine.Scene is Overworld overworld && typeof(Oui).IsAssignableFrom(type) && !type.IsAbstract) {
+                        Logger.Verbose("core", $"Instantiating UI from {meta}: {type.FullName}");
+
+                        Oui oui = (Oui) Activator.CreateInstance(type);
+                        oui.Visible = false;
+                        overworld.Add(oui);
+                        overworld.UIs.Add(oui);
+                    }
                 }
                 // We should run the map data processors again if new berry types are registered, so that CoreMapDataProcessor assigns them checkpoint IDs and orders.
                 if (newStrawberriesRegistered && _Initialized) {
                     Logger.Verbose("core", $"Assembly {asm.FullName} for module {meta} has custom strawberries: triggering map reload.");
-                    Everest.TriggerModInitMapReload();
+                    TriggerModInitMapReload();
                 }
             }
 
@@ -810,6 +832,7 @@ namespace Celeste.Mod {
                             Logger.Verbose("loader", $"-> unloading: {unloadMod.Name}");
                             unloadMod.AssemblyContext?.Dispose();
                             unloadMod.AssemblyContext = null;
+                            unloadMod.InvalidateHash();
                         }
 
                         // Load modules in the reverse order determined before (dependencies before dependents)

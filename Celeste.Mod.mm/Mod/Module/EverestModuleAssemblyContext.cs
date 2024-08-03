@@ -5,6 +5,7 @@ using Mono.Cecil;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -67,7 +68,7 @@ namespace Celeste.Mod {
         private readonly ConcurrentDictionary<string, AssemblyDefinition> _LocalResolveCache = new ConcurrentDictionary<string, AssemblyDefinition>();
 
         private LinkedListNode<EverestModuleAssemblyContext> listNode;
-        private bool isDisposed = false;
+        private bool isDisposed = false, currentlyDisposing = false;
 
         internal EverestModuleAssemblyContext(EverestModuleMetadata meta) : base(meta.Name, true) {
             ModuleMeta = meta;
@@ -105,6 +106,40 @@ namespace Celeste.Mod {
             lock (LOCK) {
                 if (isDisposed)
                     return;
+
+                // We have to drop the lock now to unload all mod modules
+                // However, we want to avoid having two concurrent Dispose calls going on
+                // As such set a flag to indicate that we are currently tearing down the ALC
+                if (currentlyDisposing)
+                    return;
+
+                currentlyDisposing = true;
+            }
+
+            // Unload all assemblies loaded in the context
+            // Do this before setting isDisposed, as the EverestModule Unload function may trigger assembly loads
+            // Because of this, we also have to do this really cursed method of unloading assemblies, since the `Assemblies` collection may be modified :/
+            HashSet<string> unloadedAsms = new HashSet<string>();
+            static string GetAssemblyName(Assembly asm) => asm.FullName ?? $"{asm.ToString()}@{asm.GetHashCode()}";
+
+            while (true) {
+                // Find an assembly to unload
+                Assembly asm;
+                lock (LOCK)
+                    asm = Assemblies.FirstOrDefault(asm => !unloadedAsms.Contains(GetAssemblyName(asm)));
+
+                if (asm == null)
+                    break;
+
+                // Unload the assembly
+                Everest.UnloadAssembly(ModuleMeta, asm);
+                unloadedAsms.Add(GetAssemblyName(asm));
+            }
+
+            lock (LOCK) {
+                _LoadedAssemblies.Clear();
+
+                // *Now* we can set the disposed flag
                 isDisposed = true;
 
                 // Remove from mod ALC list
@@ -122,14 +157,10 @@ namespace Celeste.Mod {
                     watcher.Dispose();
                 _AssemblyReloadWatchers.Clear();
 
-                // Unload all assemblies loaded in the context
+                // Dispose all module definitions
                 foreach (ModuleDefinition module in _AssemblyModules.Values)
                     module.Dispose();
                 _AssemblyModules.Clear();
-
-                foreach (Assembly asm in Assemblies)
-                    Everest.UnloadAssembly(ModuleMeta, asm);            
-                _LoadedAssemblies.Clear();
     
                 _AssemblyLoadCache.Clear();
                 _LocalLoadCache.Clear();
@@ -137,6 +168,36 @@ namespace Celeste.Mod {
             }
 
             Unload();
+        }
+
+        internal void PostBootCleanup() {
+            // Clear the assembly resolves caches
+            // They are primarily used by the relinker, and as such not needed anymore once the game is running
+            _AssemblyResolveCache.Clear();
+            _LocalResolveCache.Clear(); 
+        }
+
+        /// <summary>
+        /// Calculates the checksums used to cache the assembly in any relevant
+        /// caches (like the relinker cache), and adds them to the given list.
+        /// Note that said checksums must not necessarily be unique!
+        /// </summary>
+        /// <param name="checksums">The list to add the calculated checksums to</param>
+        /// <param name="path">The path of the assembly inside of the mod</param>
+        /// <param name="symPath">The path of the assembly's symbols inside of mod, or null</param>
+        public void CalcAssemblyCacheChecksums(List<string> checksums, string path, string symPath) {
+            if (!string.IsNullOrEmpty(ModuleMeta.PathArchive)) {
+                // We can just use the mod's entire hash for the checksum
+                // This removes the need to read in the assemblies for checksum calculation
+                checksums.Add(ModuleMeta.Hash.ToHexadecimalString());
+            } else if (!string.IsNullOrEmpty(ModuleMeta.PathDirectory)) {
+                // There's no overhead for accessing the files of directory mods, so just calculate the checksum directly
+                checksums.Add(Everest.GetChecksum(path).ToHexadecimalString());
+
+                if (symPath != null)
+                    checksums.Add(Everest.GetChecksum(symPath).ToHexadecimalString());
+            } else
+                throw new UnreachableException();
         }
 
         /// <summary>
@@ -178,19 +239,25 @@ namespace Celeste.Mod {
 
                             string symEntryPath = Path.ChangeExtension(osSepPath, ".pdb").Replace(Path.DirectorySeparatorChar, '/');
                             ZipEntry symEntry = zip.Entries.FirstOrDefault(entry => entry.FileName == symEntryPath);
+                            if (symEntry == null)
+                                symEntryPath = null;
+
+                            (Stream stream, Stream symStream) StreamOpener() => (entry.ExtractStream(), symEntry?.ExtractStream());
 
                             if (entry != null)
-                                using (Stream stream = entry.ExtractStream())
-                                using (Stream symStream = symEntry?.ExtractStream())
-                                    asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, stream, symStream);
+                                asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, entryPath, symEntryPath, StreamOpener);
                         }
                     else if (!string.IsNullOrEmpty(ModuleMeta.PathDirectory)) {
                         string symPath = Path.ChangeExtension(path, ".pdb");
-                        if (File.Exists(path))
-                            using (Stream stream = File.OpenRead(path))
-                            using (Stream symStream = File.Exists(symPath) ? File.OpenRead(symPath) : null)
-                                asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, stream, symStream);
-                    }
+                        if (!File.Exists(symPath))
+                            symPath = null;
+
+                        (Stream stream, Stream symStream) StreamOpener() => (File.OpenRead(path), symPath != null ? File.OpenRead(symPath) : null);
+
+                        if (File.Exists(osSepPath))
+                            asm = Everest.Relinker.GetRelinkedAssembly(ModuleMeta, asmName, path, symPath, StreamOpener);
+                    } else
+                        throw new UnreachableException();
                 } finally {
                     _ActiveLocalLoadContexts = prevCtxs;
                 }
@@ -513,7 +580,8 @@ namespace Celeste.Mod {
                     // We have to unzip the native libs into the cache
                     string cachePath = Path.Combine(Everest.Loader.PathCache, "unmanaged-libs", UnmanagedLibraryFolder, ModuleMeta.Name);
 
-                    string modHash = (ModuleMeta.Hash ?? ModuleMeta.Multimeta.First(meta => meta.Hash != null).Hash).ToHexadecimalString();
+                    string modHash = ModuleMeta.Hash.ToHexadecimalString();
+
                     if (Directory.Exists(cachePath) && (!File.Exists(cachePath + ".sum") || File.ReadAllText(cachePath + ".sum") != modHash))
                         Directory.Delete(cachePath, true);
 
@@ -546,7 +614,8 @@ namespace Celeste.Mod {
                     // For unzipped mods, we can simply load directly from the file system
                     if (NativeLibrary.TryLoad(Path.Combine(_ModAsmDir, UnmanagedLibraryFolder, libName), out IntPtr handle))
                         return handle;
-                }
+                } else
+                throw new UnreachableException();
             }
 
             return IntPtr.Zero;

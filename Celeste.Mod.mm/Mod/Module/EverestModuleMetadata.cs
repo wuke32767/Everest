@@ -74,10 +74,12 @@ namespace Celeste.Mod {
         /// </summary>
         public List<EverestModuleMetadata> OptionalDependencies { get; set; } = new List<EverestModuleMetadata>();
 
+        private byte[] _Hash;
+
         /// <summary>
         /// The runtime mod hash. Might not be determined by all mod content.
         /// </summary>
-        public byte[] Hash { get; set; }
+        public byte[] Hash => _Hash ??= Everest.GetChecksum(this);
 
         /// <summary>
         /// Whether this module supports experimental live code reloading or not.
@@ -120,5 +122,23 @@ namespace Celeste.Mod {
             }
         }
 
+        /// <summary>
+        /// Performs the mod registration tasks that should be performed for every mod once, not for every instance of EverestModule or every DLL.
+        /// Called after the EverestModules have been registered.
+        /// </summary>
+        internal void RegisterMod() {
+            Everest.InvalidateInstallationHash();
+
+            // Audio banks are cached, and as such use the module's hash. We can only ingest those now.
+            if (patch_Audio.AudioInitialized) {
+                patch_Audio.IngestNewBanks();
+            }
+            
+            Everest.CheckDependenciesOfDelayedMods();
+        }
+
+        internal void InvalidateHash() {
+            _Hash = null;
+        }
     }
 }

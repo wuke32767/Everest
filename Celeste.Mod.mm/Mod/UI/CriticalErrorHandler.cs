@@ -1,4 +1,5 @@
 using Celeste.Mod.Core;
+using Celeste.Mod.Helpers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Monocle;
@@ -220,8 +221,33 @@ namespace Celeste.Mod.UI {
                 writer.WriteLine("Loaded Mods");
                 try {
                     lock (Everest._Modules) {
-                        foreach (EverestModule mod in Everest._Modules)
-                            writer.WriteLine($" - {mod.Metadata.Name}: {mod.Metadata.VersionString}{mod switch {LuaModule => " [Lua module]", NullModule => "", _ => $" [{mod.GetType().FullName}]"}}");
+                        bool updatesAvailable = ModUpdaterHelper.IsAsyncUpdateCheckingDone();
+                        Dictionary<EverestModuleMetadata, ModUpdateInfo> availableUpdatesInv = new();
+                        if (updatesAvailable) {
+                            try {
+                                SortedDictionary<ModUpdateInfo, EverestModuleMetadata> availableUpdates =
+                                    ModUpdaterHelper.GetAsyncLoadedModUpdates();
+                                foreach ((ModUpdateInfo key, EverestModuleMetadata value) in availableUpdates) {
+                                    availableUpdatesInv[value] = key;
+                                }
+
+                                writer.WriteLine(
+                                    "(entries marked with * are known to not match latest on the database)");
+                            } catch (Exception ex) {
+                                writer.WriteLine($"(failed to check update status: {ex.GetType().FullName}: {ex.Message})");
+                                updatesAvailable = false;
+                            }
+                        }
+                        
+                        foreach (EverestModule mod in Everest._Modules) {
+                            writer.Write($" - {mod.Metadata.Name}: ");
+                            writer.Write($"{mod.Metadata.VersionString}");
+                            if (updatesAvailable && availableUpdatesInv.TryGetValue(mod.Metadata, out ModUpdateInfo updateInfo)) {
+                                writer.Write($"* (-> {updateInfo.Version})");
+                            }
+                            writer.Write($"{mod switch { NullModule => "", _ => $" [{mod.GetType().FullName}]" }}");
+                            writer.WriteLine();
+                        }
                     }
                 } catch (Exception ex) {
                     writer.WriteLine($" - error listing mods: {ex.GetType().FullName}: {ex.Message}");
@@ -229,6 +255,20 @@ namespace Celeste.Mod.UI {
 
                 writer.WriteLine();
                 writer.WriteLine($"Crash Exception: {error}");
+                writer.WriteLine();
+                writer.WriteLine($"Crash HResult: {error.HResult}");
+                writer.WriteLine($"Inner exception (if any): {error.InnerException}");
+                writer.WriteLine();
+                
+                StackTrace trace = new(error, true);
+                StackFrame latestFrame = trace.GetFrame(0);
+                if (latestFrame != null) {
+                    writer.WriteLine($"Last stack frame: {latestFrame}");
+                    writer.WriteLine($"Frame IL offset: {latestFrame.GetILOffset()}");
+                    writer.WriteLine($"Frame native offset: {latestFrame.GetNativeOffset()}");
+                } else {
+                    writer.WriteLine("Couldn't fetch latest frame!");
+                }
             } catch (Exception ex) {
                 Logger.Error("crit-error-handler", "Error backing up log file:");
                 Logger.LogDetailed(ex, "crit-error-handler");
@@ -565,7 +605,16 @@ namespace Celeste.Mod.UI {
                     // Draw the player sprite to the render target
                     Celeste.Instance.GraphicsDevice.SetRenderTarget(playerRenderTarget);
                     Celeste.Instance.GraphicsDevice.Clear(Color.Transparent);
-                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone, null, Matrix.CreateTranslation(16, 32, 0));
+
+                    SpriteSortMode spriteSortMode = SpriteSortMode.Deferred;
+                    BlendState blendState = BlendState.AlphaBlend;
+                    SamplerState samplerState = SamplerState.PointClamp;
+                    DepthStencilState depthStencilState = DepthStencilState.Default;
+                    RasterizerState rasterizerState = RasterizerState.CullNone;
+                    Effect effect = null;
+                    Matrix matrix = Matrix.CreateTranslation(16, 32, 0);
+                    OnBeforePlayerRender?.Invoke(ref spriteSortMode, ref blendState, ref samplerState, ref depthStencilState, ref rasterizerState, ref effect, ref matrix);
+                    Draw.SpriteBatch.Begin(spriteSortMode, blendState, samplerState, depthStencilState, rasterizerState, effect, matrix);
 
                     try {
                         playerHair.AfterUpdate();
@@ -573,6 +622,7 @@ namespace Celeste.Mod.UI {
                         playerSprite.Render();
                     } finally {
                         Draw.SpriteBatch.End();
+                        OnAfterPlayerRender?.Invoke();
                     }
                 } catch (Exception ex) {
                     Logger.Error("crit-error-handler", "Error while rendering player sprite:");
@@ -582,6 +632,23 @@ namespace Celeste.Mod.UI {
                 }
             }
         }
+
+        /// <summary>
+        /// This event is invoked before the player sprite is being rendered to
+        /// its render target. Handlers may modify the sprite batch state which
+        /// is used for drawing the sprite. When invoked, there's no active
+        /// sprite batch, but the render target has already been bound and
+        /// cleared.
+        /// </summary>
+        public static event BeforePlayerRenderHandler OnBeforePlayerRender;
+        public delegate void BeforePlayerRenderHandler(ref SpriteSortMode sortMode, ref BlendState blendState, ref SamplerState samplerState, ref DepthStencilState depthStencilState, ref RasterizerState rasterizerState, ref Effect effect, ref Matrix matrix);
+
+        /// <summary>
+        /// This event is invoked after the player sprite has been rendered to
+        /// its render target. When invoked, the sprite batch has already been
+        /// ended.
+        /// </summary>
+        public static event Action OnAfterPlayerRender;
 
         public override void Render() {
             // Draw the background
@@ -681,8 +748,14 @@ namespace Celeste.Mod.UI {
 
             DrawLineWrap($"Error Details: {errorType}: {errorMessage}", 0.7f, Color.LightGray);
             textPos.X += 50;
-            string[] btLines = (errorStackTrace ?? string.Empty).Split('\n').Select(l => l.Trim()).Where(l => !l.StartsWith("at Hook<") && !l.StartsWith("at DMD<")).ToArray();
+            string[] btLines = (errorStackTrace ?? string.Empty)
+                .Split('\n')
+                .Select(l => l.Trim())
+                .ToArray();
             for (int i = 0; i < btLines.Length; i++) {
+                // Declutter the stack trace from MonoMod detours, additionally skip the check if it's the latest one,
+                // since that means the crash was in there
+                if (i != 0 && btLines[i].StartsWith("at Hook<")) continue;
                 DrawLineWrap(btLines[i], 0.4f, Color.Gray);
                 if (textPos.Y >= Celeste.TargetHeight * 0.9f && i+1 < btLines.Length) {
                     DrawLineWrap("...", 0.5f, Color.Gray);

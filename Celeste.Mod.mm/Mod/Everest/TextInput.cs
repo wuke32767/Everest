@@ -67,8 +67,7 @@ namespace Celeste.Mod {
 
             // Warn the modder if there's ever multiple subscriptions, because chances are that they misused the event
             if (_OnInput?.GetInvocationList().Length > 1) {
-                Logger.Log(LogLevel.Warn, "TextInput", 
-                    "Simultaneous text input subscriptions detected, is this a bug? See TextInput.OnInput for proper usage");
+                Logger.Warn("TextInput", "Simultaneous text input subscriptions detected, is this a bug? See TextInput.OnInput for proper usage");            
             }
         }
 

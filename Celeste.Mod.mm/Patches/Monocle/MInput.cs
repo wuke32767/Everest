@@ -3,7 +3,10 @@
 #pragma warning disable CS0169 // The field is never used
 
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using MonoMod;
+using System;
 
 namespace Monocle {
     public class patch_MInput {
@@ -43,6 +46,17 @@ namespace Monocle {
             // Would be called "Buttons" but the Serializer gets mad because XNA "Buttons" also exists
             public enum MouseButtons {
                 Left, Right, Middle, XButton1, XButton2
+            }
+
+            // Account for non 16:9 aspect ratios
+            public Vector2 Position {
+                [MonoModReplace]
+                get => Vector2.Transform(new Vector2(MInput.Mouse.CurrentState.X - Engine.Viewport.X, MInput.Mouse.CurrentState.Y - Engine.Viewport.Y), Matrix.Invert(Engine.ScreenMatrix));
+                [MonoModReplace]
+                set {
+                    Vector2 position = Vector2.Transform(value, Engine.ScreenMatrix);
+                    Microsoft.Xna.Framework.Input.Mouse.SetPosition((int)Math.Round(position.X + Engine.Viewport.X), (int)Math.Round(position.Y + Engine.Viewport.Y));
+                }
             }
 
             public bool Check(MouseButtons button) {

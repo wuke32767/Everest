@@ -122,12 +122,8 @@ namespace Celeste.Mod {
                 try {
                     DiscordInstance.RunCallbacks();
                 } catch (Discord.ResultException e) {
-                    if (e.Message == nameof(Discord.Result.NotRunning)) {
-                        Logger.Warn("discord-game-sdk", "Discord was shut down! Disposing Game SDK.");
-                        Dispose();
-                    } else {
-                        throw;
-                    }
+                    Logger.Warn("discord-game-sdk", $"Failed to run Discord callbacks ({e.Message})! Disposing Game SDK.");
+                    Dispose();
                 }
             }
 
