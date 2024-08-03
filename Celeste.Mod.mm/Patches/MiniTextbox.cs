@@ -1,14 +1,13 @@
+#pragma warning disable CS0626 // Method, operator, or accessor is marked external and has no attributes on it
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
 using Microsoft.Xna.Framework;
 using System;
 using System.Collections;
 using Mono.Cecil;
-using Mono.Cecil.Cil;
 using Monocle;
 using MonoMod;
 using MonoMod.Cil;
-using MonoMod.InlineRT;
 using MonoMod.Utils;
 
 namespace Celeste {
@@ -90,7 +89,7 @@ namespace Celeste {
 namespace MonoMod {
     /// <summary>
     /// Patches the method to fix mini textbox not closing when it's expanding and another textbox is triggered.
-    /// Also adds additional dialog feature support, like regular text boxes, including anchors, waits and multiple pages
+    /// Also adds support for the following dialog nodes: anchors, waits and multiple pages
     /// </summary>
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchMiniTextboxRoutine))]
     class PatchMiniTextboxRoutine : Attribute { }
@@ -142,11 +141,11 @@ namespace MonoMod {
                 cursor.Goto(continueLoopTarget.Target, MoveType.AfterLabel);
 
                 ILLabel yieldReturnNullTarget = cursor.DefineLabel();
-                cursor.Emit(OpCodes.Ldloc_1);
-                cursor.Emit(OpCodes.Ldfld, f_MiniTextbox_closing);
-                cursor.Emit(OpCodes.Brfalse, yieldReturnNullTarget);
-                cursor.Emit(OpCodes.Ldc_I4_0);
-                cursor.Emit(OpCodes.Ret);
+                cursor.EmitLdloc1();
+                cursor.EmitLdfld(f_MiniTextbox_closing);
+                cursor.EmitBrfalse(yieldReturnNullTarget);
+                cursor.EmitLdcI4(0);
+                cursor.EmitRet();
                 cursor.MarkLabel(yieldReturnNullTarget);
             });
             
@@ -154,20 +153,20 @@ namespace MonoMod {
                 ILCursor cursor = new(il);
                 
                 // Before: 'if (text.Nodes[index] is FancyText.Char) { ... }' 
-                cursor.GotoNext(instr => instr.MatchIsinst("Celeste.FancyText.Char"));
-                cursor.GotoPrev(instr => instr.MatchLdloc1());
-                cursor.GotoPrev(instr => instr.MatchLdloc1());
+                cursor.GotoNext(MoveType.AfterLabel, instr => instr.MatchIsinst("Celeste.FancyText/Char"));
+                cursor.GotoPrev(MoveType.AfterLabel, instr => instr.MatchLdloc1());
+                cursor.GotoPrev(MoveType.AfterLabel, instr => instr.MatchLdloc1());
                 
-                cursor.EmitLdarg0();
+                cursor.EmitLdloc1(); // this
                 cursor.EmitCall(m_MiniTextbox_startTalking);
                 
                 // Before: 'index++;'
-                cursor.GotoNext(
+                cursor.GotoNext(MoveType.AfterLabel,
                     instr => instr.MatchLdloc1(),
                     instr => instr.MatchLdloc1(),
                     instr => instr.MatchLdfld("Celeste.MiniTextbox", "index"));
                 
-                cursor.EmitLdarg0();
+                cursor.EmitLdloc1(); // this
                 cursor.EmitLdloca(3); // ref float delay
                 cursor.EmitCall(m_MiniTextbox_handleNode);
             });
