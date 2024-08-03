@@ -149,12 +149,13 @@ namespace Celeste.Mod {
                 }
 
                 const string colorReset = "\x1b[0m";
+                const string colorFaint = "\x1b[2m"
                 string colorLevel = level.GetAnsiEscapeCodeForLevel();
                 string colorText = level.GetAnsiEscapeCodeForText();
 
                 string now_str = DateTime.Now.ToString(CultureInfo.InvariantCulture);
                 string level_str = level.FastToString();
-                outWriter.WriteLine($"({now_str}) [Everest] {colorLevel}[{level_str}] [{tag}] {colorText}{str}{colorReset}");
+                outWriter.WriteLine($"${colorFaint}({now_str}) [Everest] {colorReset}{colorLevel}[{level_str}] [{tag}] {colorText}{str}{colorReset}");
                 logWriter.WriteLine($"({now_str}) [Everest] [{level_str}] [{tag}] {str}");
             }
         }
@@ -298,7 +299,7 @@ namespace Celeste.Mod {
             return level switch {
                 LogLevel.Verbose => "\x1b[35m",
                 LogLevel.Debug => "\x1b[34m",
-                LogLevel.Info => "",
+                LogLevel.Info => "\x1b[97m",
                 LogLevel.Warn => "\x1b[33m",
                 LogLevel.Error => "\x1b[31m",
                 _ => ""
