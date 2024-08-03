@@ -289,7 +289,7 @@ namespace Celeste.Mod {
             return level switch {
                 LogLevel.Verbose => "\x1b[95m",
                 LogLevel.Debug => "\x1b[94m",
-                LogLevel.Info => "",
+                LogLevel.Info => "\x1b[0m",
                 LogLevel.Warn => "\x1b[93m",
                 LogLevel.Error => "\x1b[91m",
                 _ => ""
