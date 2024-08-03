@@ -1,5 +1,6 @@
 #pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
 
+using Microsoft.Xna.Framework;
 using System;
 using System.Collections;
 using Mono.Cecil;
@@ -20,15 +21,35 @@ namespace Celeste {
         private FancyText.Portrait portraitData;
         private SoundSource talkerSfx;
         
+        private FancyText.Anchors anchor;
+        
         public patch_MiniTextbox(string dialogId)
             : base(dialogId) {
             // no-op. MonoMod ignores this - we only need this to make the compiler shut up.
         }
 
+        public extern void orig_ctor(string dialogId);
+        [MonoModConstructor]
+        public void ctor(string dialogId) {
+            orig_ctor(dialogId);
+            
+            // Find the anchor
+            foreach (FancyText.Node node in text.Nodes) {
+                if (node is FancyText.Anchor anchorPos) {
+                    anchor = anchorPos.Position;
+                }
+            }
+        }
+
         [MonoModIgnore]
         [PatchMiniTextboxRoutine]
         private extern IEnumerator Routine();
+        
+        [MonoModIgnore]
+        [PatchMiniTextboxRender]
+        public override extern void Render();
 
+        // Start and stop SFX / animations based on delays
         private void _startTalking() {
             talkerSfx?.Param("dialogue_portrait", portraitData?.SfxExpression ?? 1.0f);
             talkerSfx?.Param("dialogue_end", 0f);
@@ -52,6 +73,14 @@ namespace Celeste {
                 }
             }
         }
+        
+        private void _applyAnchor(ref Vector2 center) {
+            if (anchor == FancyText.Anchors.Bottom) {
+                center = new Vector2(Engine.Width / 2, Engine.Height - BoxHeight / 2.0f - (Engine.Width - BoxWidth) / 4f);
+            } else if (anchor == FancyText.Anchors.Middle) {
+                center = new Vector2(Engine.Width / 2, Engine.Height / 2);
+            }
+        }
     }
 }
 
@@ -62,6 +91,9 @@ namespace MonoMod {
     /// </summary>
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchMiniTextboxRoutine))]
     class PatchMiniTextboxRoutine : Attribute { }
+    
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchMiniTextboxRender))]
+    class PatchMiniTextboxRender : Attribute { }
 
     static partial class MonoModRules {
 
@@ -70,9 +102,6 @@ namespace MonoMod {
             MethodDefinition m_MiniTextbox_handleNode = method.DeclaringType.FindMethod("_handleDialogNode")!;
             
             FieldDefinition f_MiniTextbox_closing = method.DeclaringType.FindField("closing")!;
-            
-            TypeDefinition closureRoutineType = MonoModRule.Modder.Module.GetType("Celeste.BirdPath/<Routine>d__18");
-            FieldReference closureThisField = closureRoutineType.FindField("<>4__this")!;
 
             // The routine is stored in a compiler-generated method.
             method = method.GetEnumeratorMoveNext();
@@ -139,6 +168,19 @@ namespace MonoMod {
                 cursor.EmitLdloca(3); // ref float delay
                 cursor.EmitCall(m_MiniTextbox_handleNode);
             });
+        }
+        
+        public static void PatchMiniTextboxRender(ILContext il, CustomAttribute attrib) {
+            MethodDefinition m_MiniTextbox_applyAnchor = il.Method.DeclaringType.FindMethod("_applyAnchor")!;
+            
+            ILCursor cursor = new(il);
+            
+            // After: 'Vector2 center = new Vector2(Engine.Width / 2, BoxHeight / 2.0f + (Engine.Width - BoxWidth) / 4f);'
+            cursor.GotoNext(MoveType.After, instr => instr.MatchCall("Microsoft.Xna.Framework.Vector2", ".ctor"));
+            
+            cursor.EmitLdarg0();
+            cursor.EmitLdloca(1); // ref Vector2 center
+            cursor.EmitCall(m_MiniTextbox_applyAnchor);
         }
     }
 }
