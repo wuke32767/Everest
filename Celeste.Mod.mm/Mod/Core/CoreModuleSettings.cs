@@ -274,7 +274,7 @@ namespace Celeste.Mod.Core {
             get => _ColorizedLogging;
             set {
                 if (value && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
-                    Logger.Error("core", "Failed to enalbe Windows VT support!");
+                    Logger.Error("core", "Failed to enable Windows VT support!");
                 }
                 _ColorizedLogging = value;
             }

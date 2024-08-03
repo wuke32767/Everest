@@ -438,7 +438,7 @@ namespace Celeste.Mod {
             core.Metadata.RegisterMod();
 
             if (CoreModule.Settings.ColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
-                Logger.Error("core", "Failed to enalbe Windows VT support!");
+                Logger.Error("core", "Failed to enable Windows VT support!");
             }
 
             // Note: Everest fulfills some mod dependencies by itself.
