@@ -217,7 +217,7 @@ namespace Celeste {
             try {
                 sess = new Session(Area, checkpoint);
             } catch (Exception e) {
-                Logger.Log(LogLevel.Error, "OuiChapterPanel", "Failed to construct session!");
+                Logger.Error("OuiChapterPanel", "Failed to construct session!");
                 Logger.LogDetailed(e, "OuiChapterPanel");
 
                 // rethrow the exception if there's no explicit error message

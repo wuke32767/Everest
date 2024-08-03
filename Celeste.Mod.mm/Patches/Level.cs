@@ -249,7 +249,7 @@ namespace Celeste {
                     patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnorooms");
                     throw new NullReferenceException("Current map has no rooms.");
                 }
-                Logger.Log(LogLevel.Verbose, "LoadLevel", $"Loading room {Session.LevelData.Name} of {Session.Area.GetSID()}");
+                Logger.Verbose("LoadLevel", $"Loading room {Session.LevelData.Name} of {Session.Area.GetSID()}");
 
                 orig_LoadLevel(playerIntro, isFromLoader);
 
@@ -281,8 +281,8 @@ namespace Celeste {
                     }
                 }
 
-                Logger.Log(LogLevel.Warn, "LoadLevel", $"Failed loading room {Session.Level} of {Session.Area.GetSID()}");
-                e.LogDetailed();
+                Logger.Warn("LoadLevel", $"Failed loading room {Session.Level} of {Session.Area.GetSID()}");
+                Logger.LogDetailed(e);
                 return;
             }
             Everest.Events.Level.LoadLevel(this, playerIntro, isFromLoader);
@@ -506,7 +506,7 @@ namespace Celeste {
             }
 
             if (!_LoadStrings.Contains(entityData.Name)) {
-                Logger.Log(LogLevel.Warn, "LoadLevel", $"Failed loading entity {entityData.Name}. Room: {entityData.Level.Name} Position: {entityData.Position}");
+                Logger.Warn("LoadLevel", $"Failed loading entity {entityData.Name}. Room: {entityData.Level.Name} Position: {entityData.Position}");
             }
 
             return false;

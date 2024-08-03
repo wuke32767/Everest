@@ -37,7 +37,7 @@ namespace Celeste.Mod {
             }
             
             string asmName = action.Method.DeclaringType?.Assembly.GetName().Name ?? "";
-            Logger.Log(LogLevel.Warn, "Decal Registry", $"Assembly {asmName} is using the legacy DecalRegistry.AddPropertyHandler(string, Action<Decal, XmlAttributeCollection>) method for property {propertyName}!");
+            Logger.Warn("Decal Registry", $"Assembly {asmName} is using the legacy DecalRegistry.AddPropertyHandler(string, Action<Decal, XmlAttributeCollection>) method for property {propertyName}!");
             
             PropertyHandlerFactories[propertyName] = () => new LegacyDecalRegistryHandler(propertyName, action);
         }
@@ -57,7 +57,7 @@ namespace Celeste.Mod {
 
         internal static DecalRegistryHandler CreateHandlerOrNull(string decalName, string propertyName, XmlAttributeCollection xmlAttributes) {
             if (!PropertyHandlerFactories.TryGetValue(propertyName, out var factory)) {
-                Logger.Log(LogLevel.Warn, "Decal Registry", $"Unknown property {propertyName} in decal {decalName}");
+                Logger.Warn("Decal Registry", $"Unknown property {propertyName} in decal {decalName}");
                 return null;
             }
             
@@ -70,7 +70,7 @@ namespace Celeste.Mod {
             string asmName = callingAsm.GetName().Name;
             string modName = Everest.Content.Mods.FirstOrDefault(mod => mod is AssemblyModContent && mod.DefaultName == asmName)?.Name;
             string conflictSource = !string.IsNullOrEmpty(modName) ? modName : asmName;
-            Logger.Log(LogLevel.Warn, "Decal Registry", $"Property handler for '{propertyName}' already exists! Replacing with new handler from {conflictSource}.");
+            Logger.Warn("Decal Registry", $"Property handler for '{propertyName}' already exists! Replacing with new handler from {conflictSource}.");
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace Celeste.Mod {
         /// Loads a mod's decal registry file.
         /// </summary>
         internal static void LoadModDecalRegistry(ModAsset decalRegistry) {
-            Logger.Log(LogLevel.Debug, "Decal Registry", $"Loading registry for {decalRegistry.Source.Name}");
+            Logger.Debug("Decal Registry", $"Loading registry for {decalRegistry.Source.Name}");
 
             string basePath = ((patch_Atlas) GFX.Game).RelativeDataPath + "decals/";
             List<string> localDecals = decalRegistry.Source.Map.Keys
@@ -199,7 +199,7 @@ namespace Celeste.Mod {
                 }
 
                 if (!found) {
-                    Logger.Log(LogLevel.Warn, "Decal Registry", $"Could not find any decals in {decalRegistry.Source.Name} under path {decalRegistration.Key}");
+                    Logger.Warn("Decal Registry", $"Could not find any decals in {decalRegistry.Source.Name} under path {decalRegistration.Key}");
                 }
             }
         }
@@ -215,7 +215,7 @@ namespace Celeste.Mod {
 
             XmlElement decalElement = doc["decals"];
             if (decalElement == null) {
-                Logger.Log(LogLevel.Warn, "Decal Registry", $"Could not parse the 'decals' tag for the {decalRegistry.Source.Name} registry.");
+                Logger.Warn("Decal Registry", $"Could not parse the 'decals' tag for the {decalRegistry.Source.Name} registry.");
                 return elements;
             }
 
@@ -223,7 +223,7 @@ namespace Celeste.Mod {
                 if (node is XmlElement decal) {
                     string decalPath = decal.Attr("path", null)?.ToLower();
                     if (decalPath == null) {
-                        Logger.Log(LogLevel.Warn, "Decal Registry", $"Decal in the {decalRegistry.Source.Name} registry is missing a 'path' attribute!");
+                        Logger.Warn("Decal Registry", $"Decal in the {decalRegistry.Source.Name} registry is missing a 'path' attribute!");
                         continue;
                     }
 
@@ -277,9 +277,9 @@ namespace Celeste.Mod {
             }
             
             if (RegisteredDecals.ContainsKey(decalPath)) {
-                Logger.Log(LogLevel.Verbose, "Decal Registry", $"Replaced decal {decalPath}");
+                Logger.Verbose("Decal Registry", $"Replaced decal {decalPath}");
             } else {
-                Logger.Log(LogLevel.Verbose, "Decal Registry", $"Registered decal {decalPath}");
+                Logger.Verbose("Decal Registry", $"Registered decal {decalPath}");
             }
             RegisteredDecals[decalPath] = info;
         }

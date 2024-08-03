@@ -271,9 +271,9 @@ namespace Celeste.Mod {
                     Debugger.Launch();
                     
                 else if (arg == "--debugger-attach") {
-                    Logger.Log(LogLevel.Info, "Everest", "Waiting for debugger to attach...");
+                    Logger.Info("Everest", "Waiting for debugger to attach...");
                     while (!Debugger.IsAttached) { }
-                    Logger.Log(LogLevel.Info, "Everest", "Debugger attached");
+                    Logger.Info("Everest", "Debugger attached");
                 }
 
                 else if (arg == "--dump")
@@ -305,10 +305,10 @@ namespace Celeste.Mod {
         }
 
         internal static void Boot() {
-            Logger.Log(LogLevel.Info, "core", "Booting Everest");
-            Logger.Log(LogLevel.Info, "core", $"AppDomain: {AppDomain.CurrentDomain.FriendlyName ?? "???"}");
-            Logger.Log(LogLevel.Info, "core", $"VersionCelesteString: {VersionCelesteString}");
-            Logger.Log(LogLevel.Info, "core", $"SystemMemoryMB: {SystemMemoryMB:F3} MB");
+            Logger.Info("core", "Booting Everest");
+            Logger.Info("core", $"AppDomain: {AppDomain.CurrentDomain.FriendlyName ?? "???"}");
+            Logger.Info("core", $"VersionCelesteString: {VersionCelesteString}");
+            Logger.Info("core", $"SystemMemoryMB: {SystemMemoryMB:F3} MB");
 
             if (Type.GetType("Mono.Runtime") != null) {
                 // Mono hates HTTPS.
@@ -362,7 +362,7 @@ namespace Celeste.Mod {
             string modSettingsOld = Path.Combine(PathEverest, "ModSettings");
             string modSettingsRIP = Path.Combine(PathEverest, "ModSettings-OBSOLETE");
             if (Directory.Exists(modSettingsOld) || Directory.Exists(modSettingsRIP)) {
-                Logger.Log(LogLevel.Warn, "core", "THE ModSettings FOLDER IS OBSOLETE AND WILL NO LONGER BE USED!");
+                Logger.Warn("core", "THE ModSettings FOLDER IS OBSOLETE AND WILL NO LONGER BE USED!");
                 if (Directory.Exists(modSettingsOld) && !Directory.Exists(modSettingsRIP))
                     Directory.Move(modSettingsOld, modSettingsRIP);
             }
@@ -436,6 +436,10 @@ namespace Celeste.Mod {
             Type[] types = asm.GetTypesSafe();
             Loader.ProcessAssembly(core.Metadata, asm, types);
             core.Metadata.RegisterMod();
+
+            if (CoreModule.Settings.ColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
+                Logger.Error("core", "Failed to enable Windows VT support!");
+            }
 
             // Note: Everest fulfills some mod dependencies by itself.
             NullModule vanilla = new NullModule(new EverestModuleMetadata {
@@ -572,7 +576,7 @@ namespace Celeste.Mod {
             if (SaveData.Instance != null) {
                 foreach (EverestModule module in modules) {
                     // we are in a save. we are expecting the save data to already be loaded at this point
-                    Logger.Log(LogLevel.Verbose, "core", $"Loading save data slot {SaveData.Instance.FileSlot} for {module.Metadata}");
+                    Logger.Verbose("core", $"Loading save data slot {SaveData.Instance.FileSlot} for {module.Metadata}");
                     if (module.SaveDataAsync) {
                         module.DeserializeSaveData(SaveData.Instance.FileSlot, module.ReadSaveData(SaveData.Instance.FileSlot));
                     } else {
@@ -583,7 +587,7 @@ namespace Celeste.Mod {
 
                     if (SaveData.Instance.CurrentSession?.InArea ?? false) {
                         // we are in a level. we are expecting the session to already be loaded at this point
-                        Logger.Log(LogLevel.Verbose, "core", $"Loading session slot {SaveData.Instance.FileSlot} for {module.Metadata}");
+                        Logger.Verbose("core", $"Loading session slot {SaveData.Instance.FileSlot} for {module.Metadata}");
                         if (module.SaveDataAsync) {
                             module.DeserializeSession(SaveData.Instance.FileSlot, module.ReadSession(SaveData.Instance.FileSlot));
                         } else {
@@ -598,7 +602,7 @@ namespace Celeste.Mod {
             // Check if any module defines a PrepareMapDataProcessors method. If this is the case, we want to reload maps so that they are applied.
             foreach (EverestModule module in modules) {
                 if (module.GetType().GetMethod("PrepareMapDataProcessors", new Type[] { typeof(MapDataFixup) })?.DeclaringType == module.GetType()) {
-                    Logger.Log(LogLevel.Verbose, "core", $"Module {module.Metadata} has map data processors: reloading maps.");
+                    Logger.Verbose("core", $"Module {module.Metadata} has map data processors: reloading maps.");
                     TriggerModInitMapReload();
                     break;
                 }
@@ -694,12 +698,12 @@ namespace Celeste.Mod {
                                     didDelayOptionalDependencies = true;
                                 } else {
                                     // all dependencies are loaded, all optional dependencies are either loaded or won't load => we're good to go!
-                                    Logger.Log(LogLevel.Info, "core", $"Dependencies of mod {entry.Item1} are now satisfied: loading");
+                                    Logger.Info("core", $"Dependencies of mod {entry.Item1} are now satisfied: loading");
                                     EverestSplashHandler.IncreaseLoadedModCount(entry.Item1.Name); // Notify the splash
                                     
                                     if (Everest.Modules.Any(mod => mod.Metadata.Name == entry.Item1.Name)) {
                                         // a duplicate of the mod was loaded while it was sitting in the delayed list.
-                                        Logger.Log(LogLevel.Warn, "core", $"Mod {entry.Item1.Name} already loaded!");
+                                        Logger.Warn("core", $"Mod {entry.Item1.Name} already loaded!");
                                     } else {
                                         // actually load the mod.
                                         entry.Item2?.Invoke();
@@ -716,7 +720,7 @@ namespace Celeste.Mod {
                             if (i == Loader.Delayed.Count - 1 && didDelayOptionalDependencies) {
                                 // we considered all mods, but we delayed some of them because they had an optional dependency that "could be loaded"... yet nothing got loaded.
                                 // that's probably a circular optional dependency case, so we should just reconsider everything again ignoring optional dependencies.
-                                Logger.Log(LogLevel.Warn, "core", $"Mods with unsatisfied optional dependencies were delayed but never loaded (probably due to circular optional dependencies), forcing them to load!");
+                                Logger.Warn("core", $"Mods with unsatisfied optional dependencies were delayed but never loaded (probably due to circular optional dependencies), forcing them to load!");
                                 enforceTransitiveOptionalDependencies = false;
 
                                 i = -1;

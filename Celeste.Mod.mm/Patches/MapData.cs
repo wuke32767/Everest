@@ -72,7 +72,7 @@ namespace Celeste {
                 if (parentMode != null) {
                     MapData parentMapData = parentMode.MapData;
                     if (parentMapData == null) {
-                        Logger.Log(LogLevel.Warn, "MapData", $"Failed auto-assigning data from {Area} to its unloaded parent");
+                        Logger.Warn("MapData", $"Failed auto-assigning data from {Area} to its unloaded parent");
                         return;
                     }
 
@@ -106,8 +106,8 @@ namespace Celeste {
                 }
 
             } catch (Exception e) when (e is not OutOfMemoryException) { // OOM errors are currently unrecoverable
-                Logger.Log(LogLevel.Warn, "MapData", $"Failed loading MapData {Area}");
-                e.LogDetailed();
+                Logger.Warn("MapData", $"Failed loading MapData {Area}");
+                Logger.LogDetailed(e);
             }
         }
 
@@ -120,18 +120,18 @@ namespace Celeste {
                 if (level != null)
                     return level;
 
-                Logger.Log(LogLevel.Warn, "MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist for map {((patch_AreaData) Data)?.SID}!");
+                Logger.Warn("MapData", $"The starting room defined in metadata, \"{meta.StartLevel}\", does not exist for map {((patch_AreaData) Data)?.SID}!");
             }
 
             level = orig_StartLevel();
             if (level != null)
                 return level;
 
-            Logger.Log(LogLevel.Debug, "MapData", $"There is no room at (0,0) in map {((patch_AreaData) Data)?.SID}, attempting fallback to the first room.");
+            Logger.Debug("MapData", $"There is no room at (0,0) in map {((patch_AreaData) Data)?.SID}, attempting fallback to the first room.");
             level = Levels.FirstOrDefault();
 
             if (level == null) {
-                Logger.Log(LogLevel.Warn, "MapData", $"Map {((patch_AreaData) Data)?.SID} has no rooms!");
+                Logger.Warn("MapData", $"Map {((patch_AreaData) Data)?.SID} has no rooms!");
             }
             return level;
         }
@@ -158,7 +158,7 @@ namespace Celeste {
                 if (!levelsByName.ContainsKey(level.Name)) {
                     levelsByName.Add(level.Name, level);
                 } else {
-                    Logger.Log(LogLevel.Warn, "MapData", $"Failed to load duplicate room name {level.Name} in map {((patch_AreaData) Data)?.SID}");
+                    Logger.Warn("MapData", $"Failed to load duplicate room name {level.Name} in map {((patch_AreaData) Data)?.SID}");
                 }
             }
         }

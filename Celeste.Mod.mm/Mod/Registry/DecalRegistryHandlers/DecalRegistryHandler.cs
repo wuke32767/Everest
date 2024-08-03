@@ -43,8 +43,7 @@ namespace Celeste.Mod.Registry.DecalRegistryHandlers {
                 return parsed;
             }
                 
-            Logger.Log(LogLevel.Warn, "Decal Registry", 
-                $"Invalid '{typeof(T).Name}' value '{attribute.Value}' for attribute '{attr}' in property '{Name}'. Defaulting to {def}.");
+            Logger.Warn("Decal Registry", $"Invalid '{typeof(T).Name}' value '{attribute.Value}' for attribute '{attr}' in property '{Name}'. Defaulting to {def}.");
 
             return def;
         }
@@ -62,7 +61,7 @@ namespace Celeste.Mod.Registry.DecalRegistryHandlers {
                 return parsed;
             }
                 
-            Logger.Log(LogLevel.Warn, "Decal Registry", $"Invalid Bool value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to {def}.");
+            Logger.Warn("Decal Registry", $"Invalid Bool value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to {def}.");
 
             return def;
         }
@@ -100,7 +99,7 @@ namespace Celeste.Mod.Registry.DecalRegistryHandlers {
             try {
                 return Calc.ReadCSVIntWithTricks(attribute.Value);
             } catch (Exception) {
-                Logger.Log(LogLevel.Warn, "Decal Registry", $"Invalid CSVInt value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to {def}.");
+                Logger.Warn("Decal Registry", $"Invalid CSVInt value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to {def}.");
                 return Calc.ReadCSVIntWithTricks(def);
             }
         }
@@ -116,7 +115,7 @@ namespace Celeste.Mod.Registry.DecalRegistryHandlers {
                 return parsed;
             }
                 
-            Logger.Log(LogLevel.Warn, "Decal Registry", $"Invalid {typeof(TParsable).Name} value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to null.");
+            Logger.Warn("Decal Registry", $"Invalid {typeof(TParsable).Name} value {attribute.Value} for attribute {attr} in property {Name}. Defaulting to null.");
 
             return null;
         }

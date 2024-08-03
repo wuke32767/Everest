@@ -24,7 +24,7 @@ namespace Celeste.Mod {
                     splashPipeServerStreamConnection = splashPipeServerStream.WaitForConnectionAsync();
                 }
             } catch (IOException e) { // Server address is in use
-                Logger.Log(LogLevel.Error, "EverestSplash", "Could not start up splash server!, skipping splash");
+                Logger.Error("EverestSplash", "Could not start up splash server!, skipping splash");
                 Logger.LogDetailed(e);
                 splashPipeServerStreamConnection = null;
                 if (splashPipeServerStream != null) {
@@ -63,21 +63,21 @@ namespace Celeste.Mod {
                 splashProcess.OutputDataReceived += (_, data) => {
                     if (data.Data == null || data.Data.Trim().TrimEnd('\n', '\r') == "")
                         return; // Sometimes we may receive nulls or just blank lines, skip those
-                    Logger.Log(LogLevel.Info, "EverestSplash", data.Data);
+                    Logger.Info("EverestSplash", data.Data);
                 };
                 splashProcess.ErrorDataReceived += (_, data) => {
                     if (data.Data == null || data.Data.Trim().TrimEnd('\n', '\r') == "") return;
-                    Logger.Log(LogLevel.Error, "EverestSplash", data.Data);
+                    Logger.Error("EverestSplash", data.Data);
                 };
                 
                 // Dirty fix: really make sure the splash is executable on *nix
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ||
                     RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
                     Process chmod = Process.Start(new ProcessStartInfo("chmod", $"u+x \"{splashProcess.StartInfo.FileName}\""));
-                    if (chmod == null) Logger.Log(LogLevel.Error, "EverestSplash", "Could not chmod splash!");
+                    if (chmod == null) Logger.Error("EverestSplash", "Could not chmod splash!");
                     chmod?.WaitForExit();
                     if (chmod?.ExitCode != 0)
-                        Logger.Log(LogLevel.Error, "EverestSplash", "Chmod failed for the splash!");
+                        Logger.Error("EverestSplash", "Chmod failed for the splash!");
                 }
 
                 splashProcess.Start();
@@ -85,7 +85,7 @@ namespace Celeste.Mod {
                 splashProcess.BeginErrorReadLine();
                 SplashRan = true;
             } catch (Exception e) {
-                Logger.Log(LogLevel.Error, "EverestSplash", "Starting splash failed!");
+                Logger.Error("EverestSplash", "Starting splash failed!");
                 Logger.LogDetailed(e);
                 // Destroy the server asap
                 if (splashPipeServerStream.IsConnected)
@@ -132,7 +132,7 @@ namespace Celeste.Mod {
                     lastFlush = sw.FlushAsync(); // Windows pipes have a tendency to deadlock writes if the other end doesn't read immediately
                     lastFlush.Wait(1000);
                 } catch (Exception e) {
-                    Logger.Log(LogLevel.Error, "EverestSplash", "Could not send data to splash!");
+                    Logger.Error("EverestSplash", "Could not send data to splash!");
                     Logger.LogDetailed(e);
                 }
             }
@@ -146,10 +146,10 @@ namespace Celeste.Mod {
                 }
                 if (splashPipeServerStream == null) return; // If the splash never ran, no-op
                 if (!splashPipeServerStreamConnection.IsCompleted || !lastFlush.IsCompletedSuccessfully) {
-                    Logger.Log(LogLevel.Error, "EverestSplash", "Could not connect to splash");
+                    Logger.Error("EverestSplash", "Could not connect to splash");
                     if (!splashProcess.HasExited) { // if it hangs up, just kill it
                         splashProcess.Kill();
-                        Logger.Log(LogLevel.Error, "EverestSplash", "Splash was still alive. Killed splash!");
+                        Logger.Error("EverestSplash", "Splash was still alive. Killed splash!");
                     }
                     return;
                 }
@@ -166,17 +166,17 @@ namespace Celeste.Mod {
                             // for more info
                             sr.ReadLine();
                         } catch (Exception e) {
-                            Logger.Log(LogLevel.Error, "EverestSplash", "Could not read line!");
+                            Logger.Error("EverestSplash", "Could not read line!");
                             Logger.LogDetailed(e);
                         }
                     });
                     splashFeedbackThread.Start();
                     bool stopSuccessful = splashFeedbackThread.Join(TimeSpan.FromSeconds(10)); // Big enough timeout for any modern computer
                     if (!stopSuccessful) {
-                        Logger.Log(LogLevel.Error, "EverestSplash", "Timeout!, splash did not respond, continuing...");
+                        Logger.Error("EverestSplash", "Timeout!, splash did not respond, continuing...");
                         if (!splashProcess.HasExited) { // if it hangs up, just kill it
                             splashProcess.Kill();
-                            Logger.Log(LogLevel.Error, "EverestSplash", "Splash was still alive. Killed splash!");
+                            Logger.Error("EverestSplash", "Splash was still alive. Killed splash!");
                         }
                     }
                     // Destroy the server asap for any future boots
@@ -187,7 +187,7 @@ namespace Celeste.Mod {
                     splashPipeServerStreamConnection = null;
                     splashProcess = null;
                 } catch (Exception e) {
-                    Logger.Log(LogLevel.Error, "EverestSplash", "Could not stop splash!");
+                    Logger.Error("EverestSplash", "Could not stop splash!");
                     Logger.LogDetailed(e);
                 }
             }

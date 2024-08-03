@@ -88,7 +88,7 @@ namespace Celeste.Mod {
                 typeof(EverestModule) != GetType().GetMethod(nameof(SerializeSession)).DeclaringType ||
                 typeof(EverestModule) != GetType().GetMethod(nameof(WriteSession)).DeclaringType;
             if (!SaveDataAsync)
-                Logger.Log(LogLevel.Warn, "EverestModule", $"{GetType().FullName} doesn't support save data async IO!");
+                Logger.Warn("EverestModule", $"{GetType().FullName} doesn't support save data async IO!");
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace Celeste.Mod {
                     }
                 }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to load the settings of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to load the settings of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
 
@@ -162,7 +162,7 @@ namespace Celeste.Mod {
                     }
                 }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to save the settings of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to save the settings of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
         }
@@ -215,7 +215,7 @@ namespace Celeste.Mod {
             try {
                 return File.ReadAllBytes(path);
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to read the save data of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to read the save data of {Metadata.Name}!");
                 Logger.LogDetailed(e);
                 return null;
             }
@@ -251,7 +251,7 @@ namespace Celeste.Mod {
                         stream.Flush(true);
                 }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to write the save data of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to write the save data of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
         }
@@ -284,7 +284,7 @@ namespace Celeste.Mod {
                 }
                 _SaveData.Index = index;
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to deserialize the save data of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to deserialize the save data of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
         }
@@ -313,7 +313,7 @@ namespace Celeste.Mod {
                 }
 
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to serialize the save data of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to serialize the save data of {Metadata.Name}!");
                 Logger.LogDetailed(e);
                 return null;
             }
@@ -366,7 +366,7 @@ namespace Celeste.Mod {
             try {
                 return File.ReadAllBytes(path);
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to read the session of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to read the session of {Metadata.Name}!");
                 Logger.LogDetailed(e);
                 return null;
             }
@@ -402,7 +402,7 @@ namespace Celeste.Mod {
                         stream.Flush(true);
                 }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to write the session of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to write the session of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
         }
@@ -435,7 +435,7 @@ namespace Celeste.Mod {
                 }
                 _Session.Index = index;
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to deserialize the session of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to deserialize the session of {Metadata.Name}!");
                 Logger.LogDetailed(e);
             }
         }
@@ -464,7 +464,7 @@ namespace Celeste.Mod {
                 }
 
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "EverestModule", $"Failed to serialize the session of {Metadata.Name}!");
+                Logger.Warn("EverestModule", $"Failed to serialize the session of {Metadata.Name}!");
                 Logger.LogDetailed(e);
                 return null;
             }
@@ -895,11 +895,11 @@ namespace Celeste.Mod {
         }
 
         public virtual void LogRegistration() {
-            Logger.Log(LogLevel.Info, "core", $"Registered code module {GetType().FullName} for module {Metadata}.");
+            Logger.Info("core", $"Registered code module {GetType().FullName} for module {Metadata}.");
         }
 
         public virtual void LogUnregistration() {
-            Logger.Log(LogLevel.Info, "core", $"Unregistered code module {GetType().FullName} for module {Metadata}.");
+            Logger.Info("core", $"Unregistered code module {GetType().FullName} for module {Metadata}.");
         }
 
     }

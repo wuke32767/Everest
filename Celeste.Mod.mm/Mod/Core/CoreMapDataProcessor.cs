@@ -73,7 +73,7 @@ namespace Celeste.Mod.Core {
                             if (checkpoint <= CheckpointsAuto.Count) {
                                 CheckpointsAuto.Insert(checkpoint, data);
                             } else {
-                                Logger.Log(LogLevel.Warn, "core", $"Checkpoint ID {checkpoint} exceeds checkpoint count in room {data.Level} of map {Mode.Path}. Reassigning checkpoint ID.");
+                                Logger.Warn("core", $"Checkpoint ID {checkpoint} exceeds checkpoint count in room {data.Level} of map {Mode.Path}. Reassigning checkpoint ID.");
                                 CheckpointsAuto.Add(data);
                             }
                         }
@@ -110,7 +110,7 @@ namespace Celeste.Mod.Core {
                             for (int i = 0; i <= MaximumBerryOrderPerCheckpoint[checkpoint]; i++) {
                                 if (!placedBerries.TryGetValue(i, out BinaryPacker.Element placedBerry)) {
                                     if (gaps == 0) {
-                                        Logger.Log(LogLevel.Warn, "core", $"Gap in berry order in checkpoint {checkpoint} of map {Mode.Path}. Reassigning berry order.");
+                                        Logger.Warn("core", $"Gap in berry order in checkpoint {checkpoint} of map {Mode.Path}. Reassigning berry order.");
                                     }
                                     gaps++;
                                 } else {
@@ -120,7 +120,7 @@ namespace Celeste.Mod.Core {
 
                             // assign berries with invalid checkpoint ID to final checkpoint
                             if (checkpoint > Checkpoint) {
-                                Logger.Log(LogLevel.Warn, "core", $"Invalid checkpoint ID {checkpoint} for berries in map {Mode.Path}. Reassigning to last checkpoint.");
+                                Logger.Warn("core", $"Invalid checkpoint ID {checkpoint} for berries in map {Mode.Path}. Reassigning to last checkpoint.");
                                 int order = MaximumBerryOrderPerCheckpoint.GetValueOrDefault(Checkpoint, -1);
                                 foreach (var placedBerry in placedBerries.OrderBy(kv => kv.Key)) {
                                     BinaryPacker.Element berry = placedBerry.Value;
@@ -244,7 +244,7 @@ namespace Celeste.Mod.Core {
                                     if (CheckpointsManual.TryAdd(id, c)) {
                                         MaxManualCheckpoint = Math.Max(MaxManualCheckpoint, id);
                                     } else {
-                                        Logger.Log(LogLevel.Warn, "core", $"Duplicate checkpoint ID {id} in room {LevelName} of map {Mode.Path}. Reassigning checkpoint ID.");
+                                        Logger.Warn("core", $"Duplicate checkpoint ID {id} in room {LevelName} of map {Mode.Path}. Reassigning checkpoint ID.");
                                         CheckpointsAuto.Add(c); // treat duplicate ID as -1
                                     }
                                 }
@@ -288,7 +288,7 @@ namespace Celeste.Mod.Core {
                                 MaximumBerryOrderPerCheckpoint[checkpoint] = -1;
                             }
                             if (PlacedBerriesPerCheckpoint[checkpoint].ContainsKey(order)) {
-                                Logger.Log(LogLevel.Warn, "core", $"Duplicate berry order {order} in checkpoint {checkpoint} of map {Mode.Path}. Reassigning berry order.");
+                                Logger.Warn("core", $"Duplicate berry order {order} in checkpoint {checkpoint} of map {Mode.Path}. Reassigning berry order.");
                                 if (!AutomaticBerriesPerCheckpoint.ContainsKey(checkpoint)) {
                                     AutomaticBerriesPerCheckpoint[checkpoint] = new List<BinaryPacker.Element>();
                                 }

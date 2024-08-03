@@ -105,7 +105,7 @@ namespace Celeste.Mod.UI {
 
             // our list is complete!
             stopwatch.Stop();
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"Found {allModYamls.Count} mod(s) with yaml files, took {stopwatch.ElapsedMilliseconds} ms");
+            Logger.Verbose("OuiModToggler", $"Found {allModYamls.Count} mod(s) with yaml files, took {stopwatch.ElapsedMilliseconds} ms");
             return allModYamls;
         }
 
@@ -141,7 +141,7 @@ namespace Celeste.Mod.UI {
                     }
                 }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "loader", $"Failed loading everest.yaml in archive {archive}: {e}");
+                Logger.Warn("loader", $"Failed loading everest.yaml in archive {archive}: {e}");
             }
 
             return null;
@@ -175,7 +175,7 @@ namespace Celeste.Mod.UI {
                         }
                     }
             } catch (Exception e) {
-                Logger.Log(LogLevel.Warn, "loader", $"Failed loading everest.yaml in directory {dir}: {e}");
+                Logger.Warn("loader", $"Failed loading everest.yaml in directory {dir}: {e}");
             }
 
             return null;
@@ -541,7 +541,7 @@ namespace Celeste.Mod.UI {
             }
 
             blacklistedMods.Add(file);
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{file} was added to the blacklist");
+            Logger.Verbose("OuiModToggler", $"{file} was added to the blacklist");
 
             if (toggleDependencies && modYamls.TryGetValue(file, out EverestModuleMetadata[] metadatas)) {
                 // we should blacklist all mods that has this mod as a dependency.
@@ -566,7 +566,7 @@ namespace Celeste.Mod.UI {
             }
 
             blacklistedMods.Remove(file);
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{file} was removed from the blacklist");
+            Logger.Verbose("OuiModToggler", $"{file} was removed from the blacklist");
 
             if (toggleDependencies && TryGetModDependenciesFileNames(file, out List<string> dependencies)) {
                 // we should remove all of the mod's dependencies from the blacklist.
@@ -579,7 +579,7 @@ namespace Celeste.Mod.UI {
 
         private void addToFavorites(string modFileName) {
             favoriteMods.Add(modFileName);
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{modFileName} was added to favorites");
+            Logger.Verbose("OuiModToggler", $"{modFileName} was added to favorites");
 
             if (TryGetModDependenciesFileNames(modFileName, out List<string> dependenciesFileNames)) {
                 foreach (string dependenciesFileName in dependenciesFileNames) {
@@ -602,7 +602,7 @@ namespace Celeste.Mod.UI {
 
             // Add dependent mod
             dependents.Add(dependentModFileName);
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{modFileName} was added as a favorite dependency of {dependentModFileName}");
+            Logger.Verbose("OuiModToggler", $"{modFileName} was added as a favorite dependency of {dependentModFileName}");
 
 
             // we want to walk the dependence graph and add all the sub-dependencies as dependencies of the original dependentModFileName  
@@ -615,7 +615,7 @@ namespace Celeste.Mod.UI {
 
         private void removeFromFavorites(string modFileName) {
             favoriteMods.Remove(modFileName);
-            Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{modFileName} was removed from favorites");
+            Logger.Verbose("OuiModToggler", $"{modFileName} was removed from favorites");
 
             if (TryGetModDependenciesFileNames(modFileName, out List<string> dependenciesFileNames)) {
                 foreach (string dependencyFileName in dependenciesFileNames) {
@@ -628,11 +628,11 @@ namespace Celeste.Mod.UI {
             if (favoriteModDependencies.TryGetValue(modFileName, out HashSet<string> dependents) && dependents.Contains(dependentModFileName)) {
 
                 dependents.Remove(dependentModFileName);
-                Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{modFileName} was removed from being a favorite dependency of {dependentModFileName}");
+                Logger.Verbose("OuiModToggler", $"{modFileName} was removed from being a favorite dependency of {dependentModFileName}");
 
                 if (dependents.Count == 0) {
                     favoriteModDependencies.Remove(modFileName);
-                    Logger.Log(LogLevel.Verbose, "OuiModToggler", $"{modFileName} is no longer a favorite dependency");
+                    Logger.Verbose("OuiModToggler", $"{modFileName} is no longer a favorite dependency");
                 }
 
                 if (TryGetModDependenciesFileNames(modFileName, out List<string> dependenciesFileNames)) {

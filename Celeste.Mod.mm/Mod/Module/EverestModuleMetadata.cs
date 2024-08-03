@@ -117,7 +117,7 @@ namespace Celeste.Mod {
 
             }
             if (!dependsOnAPI) {
-                // Logger.Log(LogLevel.Warn, "loader", $"No dependency to API found in {this}! Adding dependency to {CoreModule.Instance.Metadata}");
+                // Logger.Warn("loader", $"No dependency to API found in {this}! Adding dependency to {CoreModule.Instance.Metadata}");
                 Dependencies.Insert(0, CoreModule.Instance.Metadata);
             }
         }

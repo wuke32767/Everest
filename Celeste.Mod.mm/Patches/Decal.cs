@@ -312,8 +312,8 @@ namespace Celeste {
                     patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_decalregerror")
                         .Replace("((property))", handler.Name)
                         .Replace("((decal))", text);
-                    Logger.Log(LogLevel.Warn, "Decal Registry", $"Failed to apply property '{handler.Name}' to {text}");
-                    e.LogDetailed();
+                    Logger.Warn("Decal Registry", $"Failed to apply property '{handler.Name}' to {text}");
+                    Logger.LogDetailed(e);
                 }
             }
 
