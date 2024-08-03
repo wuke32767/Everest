@@ -21,6 +21,7 @@ namespace Celeste {
         private FancyText.Portrait portraitData;
         private SoundSource talkerSfx;
         
+        private int start;
         private FancyText.Anchors anchor;
         
         public patch_MiniTextbox(string dialogId)
@@ -61,6 +62,8 @@ namespace Celeste {
         private void _handleDialogNode(ref float delay) {
             if (text[index] is FancyText.Wait wait) {
                 delay += wait.Duration;
+            } else if (text[index] is FancyText.NewPage) {
+                start = index + 1;
             }
             
             if (delay > 0.5f)
@@ -173,6 +176,8 @@ namespace MonoMod {
         public static void PatchMiniTextboxRender(ILContext il, CustomAttribute attrib) {
             MethodDefinition m_MiniTextbox_applyAnchor = il.Method.DeclaringType.FindMethod("_applyAnchor")!;
             
+            FieldDefinition f_MiniTextbox_start = il.Method.DeclaringType.FindField("start")!;
+            
             ILCursor cursor = new(il);
             
             // After: 'Vector2 center = new Vector2(Engine.Width / 2, BoxHeight / 2.0f + (Engine.Width - BoxWidth) / 4f);'
@@ -181,6 +186,14 @@ namespace MonoMod {
             cursor.EmitLdarg0();
             cursor.EmitLdloca(1); // ref Vector2 center
             cursor.EmitCall(m_MiniTextbox_applyAnchor);
+            
+            // Replace: 'text.Draw(new Vector2(topleft.X + portraitSize + 32f, center.Y), new Vector2(0f, 0.5f), new Vector2(1f, ease) * 0.75f, 1f, 0, index);'
+            // With:    'text.Draw(new Vector2(topleft.X + portraitSize + 32f, center.Y), new Vector2(0f, 0.5f), new Vector2(1f, ease) * 0.75f, 1f, start, index);'
+            cursor.Index = il.Instrs.Count - 1;
+            cursor.GotoPrev(instr => instr.MatchLdcI4(0));
+            cursor.Remove();
+            cursor.EmitLdarg0();
+            cursor.EmitLdfld(f_MiniTextbox_start);
         }
     }
 }
