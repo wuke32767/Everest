@@ -1,8 +1,9 @@
-﻿using System;
+﻿using Celeste.Mod.Core;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -237,6 +238,53 @@ namespace Celeste.Mod.Helpers {
 
             string overrideName = $"modname_{modNameRaw.DialogKeyify()}".DialogCleanOrNull();
             return overrideName ?? modNameRaw.SpacedPascalCase();
+        }
+
+        public static IEnumerable GetAllMirrorUrls(string url) {
+            return new EnumeratorEnumerator { Enumerator = getAllMirrorUrls(url) };
+        }
+
+        // Make sure to keep this in sync with
+        // - https://github.com/EverestAPI/Olympus/blob/main/sharp/CmdUpdateAllMods.cs :: getAllMirrorUrls
+        // - https://github.com/maddie480/RandomStuffWebsite/blob/main/front-vue/src/components/ModListItem.vue :: getMirrorLink
+        private static IEnumerator<string> getAllMirrorUrls(string url) {
+            uint gbid = 0;
+            if ((url.StartsWith("http://gamebanana.com/dl/") && !uint.TryParse(url.Substring("http://gamebanana.com/dl/".Length), out gbid)) ||
+                (url.StartsWith("https://gamebanana.com/dl/") && !uint.TryParse(url.Substring("https://gamebanana.com/dl/".Length), out gbid)) ||
+                (url.StartsWith("http://gamebanana.com/mmdl/") && !uint.TryParse(url.Substring("http://gamebanana.com/mmdl/".Length), out gbid)) ||
+                (url.StartsWith("https://gamebanana.com/mmdl/") && !uint.TryParse(url.Substring("https://gamebanana.com/mmdl/".Length), out gbid)))
+                gbid = 0;
+
+            if (gbid == 0) {
+                yield return url;
+                yield break;
+            }
+
+            foreach (string mirrorId in CoreModule.Settings.MirrorPreferences.Split(',')) {
+                switch (mirrorId) {
+                    case "gb":
+                        yield return url;
+                        break;
+
+                    case "jade":
+                        yield return $"https://celestemodupdater.0x0a.de/banana-mirror/{gbid}.zip";
+                        break;
+
+                    case "wegfan":
+                        yield return $"https://celeste.weg.fan/api/v2/download/gamebanana-files/{gbid}";
+                        break;
+
+                    case "otobot":
+                        yield return $"https://banana-mirror-mods.celestemods.com/{gbid}.zip";
+                        break;
+                }
+            }
+        }
+
+        // Why do you need to tell C# how to get an enumerator from an enumerator
+        private class EnumeratorEnumerator : IEnumerable {
+            public IEnumerator Enumerator { get; set; }
+            public IEnumerator GetEnumerator() => Enumerator;
         }
     }
 }

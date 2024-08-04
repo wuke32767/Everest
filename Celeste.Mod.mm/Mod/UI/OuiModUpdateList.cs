@@ -304,9 +304,6 @@ namespace Celeste.Mod.UI {
                     return false;
                 }
 
-                // verify its checksum
-                ModUpdaterHelper.VerifyChecksum(update, zipPath);
-
                 // mark restarting as required, as we will do weird stuff like closing zips afterwards.
                 shouldRestart = true;
 
@@ -352,12 +349,28 @@ namespace Celeste.Mod.UI {
                 return true;
             };
 
-            try {
-                Everest.Updater.DownloadFileWithProgress(update.URL, zipPath, progressCallback);
-            } catch (Exception e) when (e is WebException or TimeoutException) {
-                Logger.Warn("OuiModUpdateList", $"Download failed, trying mirror {update.MirrorURL}");
-                Logger.LogDetailed(e);
-                Everest.Updater.DownloadFileWithProgress(update.MirrorURL, zipPath, progressCallback);
+            Exception downloadException = null;
+
+            foreach (string url in ModUpdaterHelper.GetAllMirrorUrls(update.URL)) {
+                try {
+                    downloadException = null;
+
+                    Everest.Updater.DownloadFileWithProgress(url, zipPath, progressCallback);
+                    if (ongoingUpdateCancelled) break;
+
+                    ModUpdaterHelper.VerifyChecksum(update, zipPath);
+                    break; // out of the loop
+                } catch (Exception e) when (e is WebException or TimeoutException) {
+                    downloadException = e;
+                    Logger.Warn("OuiModUpdateList", $"Download from {url} failed, trying another mirror.");
+                    Logger.LogDetailed(e);
+                    continue; // to the next mirror
+                }
+            }
+
+            if (downloadException != null) {
+                ModUpdaterHelper.TryDelete(zipPath);
+                throw downloadException;
             }
         }
 

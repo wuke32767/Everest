@@ -127,12 +127,32 @@ namespace Celeste.Mod.UI {
                         return true;
                     };
 
-                    try {
-                        Everest.Updater.DownloadFileWithProgress(update.URL, zipPath, progressCallback);
-                    } catch (Exception e) when (e is WebException or TimeoutException) {
-                        Logger.Warn("AutoModUpdater", $"Download failed, trying mirror {update.MirrorURL}");
-                        Logger.LogDetailed(e);
-                        Everest.Updater.DownloadFileWithProgress(update.MirrorURL, zipPath, progressCallback);
+                    Exception downloadException = null;
+
+                    foreach (string url in ModUpdaterHelper.GetAllMirrorUrls(update.URL)) {
+                        try {
+                            downloadException = null;
+
+                            Logger.Warn("AutoModUpdater", $"Downloading from {url}");
+                            Everest.Updater.DownloadFileWithProgress(url, zipPath, progressCallback);
+                            if (skipUpdate) break;
+
+                            // verify checksum
+                            modUpdatingMessage = $"{progressString} {Dialog.Clean("AUTOUPDATECHECKER_VERIFYING")}";
+                            ModUpdaterHelper.VerifyChecksum(update, zipPath);
+
+                            break; // out of the loop
+                        } catch (Exception e) when (e is WebException or TimeoutException or IOException) {
+                            downloadException = e;
+                            Logger.Warn("AutoModUpdater", $"Download from {url} failed, trying another mirror");
+                            Logger.LogDetailed(e);
+                            continue; // to the next mirror
+                        }
+                    }
+
+                    if (downloadException != null) {
+                        ModUpdaterHelper.TryDelete(zipPath);
+                        throw downloadException;
                     }
 
                     // hide the cancel button for downloading, download is done
@@ -153,10 +173,6 @@ namespace Celeste.Mod.UI {
                             return;
                         }
                     }
-
-                    // verify its checksum
-                    modUpdatingMessage = $"{progressString} {Dialog.Clean("AUTOUPDATECHECKER_VERIFYING")}";
-                    ModUpdaterHelper.VerifyChecksum(update, zipPath);
 
                     // install it
                     restartRequired = true;
@@ -250,9 +266,9 @@ namespace Celeste.Mod.UI {
 
                 // render a 2 pixel-thick cogwheel shadow / outline
                 for (int x = -2; x <= 2; x++)
-                    for (int y = -2; y <= 2; y++)
-                        if (x != 0 || y != 0)
-                            cogwheel.DrawCentered(cogPosition + new Vector2(x, y), Color.Black, cogScale, cogRot);
+                for (int y = -2; y <= 2; y++)
+                    if (x != 0 || y != 0)
+                        cogwheel.DrawCentered(cogPosition + new Vector2(x, y), Color.Black, cogScale, cogRot);
 
                 // render the cogwheel itself
                 cogwheel.DrawCentered(cogPosition, Color.White, cogScale, cogRot);

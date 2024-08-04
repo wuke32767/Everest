@@ -4,6 +4,7 @@ using Monocle;
 using MonoMod;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using YamlDotNet.Serialization;
 
@@ -141,6 +142,7 @@ namespace Celeste.Mod.Core {
 
         [SettingIgnore]
         public bool LazyLoading_Yes_I_Know_This_Can_Cause_Bugs { get; set; } = false;
+
         [SettingNeedsRelaunch]
         [SettingInGame(false)]
         [SettingIgnore] // TODO: Show as advanced setting.
@@ -270,7 +272,7 @@ namespace Celeste.Mod.Core {
         private bool _ColorizedLogging = true;
         [SettingSubText("MODOPTIONS_COREMODULE_COLORIZEDLOGGING_DESC")]
         [SettingInGame(false)]
-        public bool ColorizedLogging { 
+        public bool ColorizedLogging {
             get => _ColorizedLogging;
             set {
                 if (value && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
@@ -280,18 +282,26 @@ namespace Celeste.Mod.Core {
             }
         }
 
+        // Keep in sync with https://github.com/EverestAPI/Olympus/blob/main/src/scenes/options.lua :: mirrorPreferences
+        public string MirrorPreferences { get; set; } = "gb,jade,otobot,wegfan";
+
         public bool DiscordRichPresence { get; set; } = true;
 
         [SettingIgnore]
         public bool DiscordShowIcon { get; set; } = true;
+
         [SettingIgnore]
         public bool DiscordShowMap { get; set; } = true;
+
         [SettingIgnore]
         public bool DiscordShowSide { get; set; } = true;
+
         [SettingIgnore]
         public bool DiscordShowRoom { get; set; } = false;
+
         [SettingIgnore]
         public bool DiscordShowBerries { get; set; } = true;
+
         [SettingIgnore]
         public bool DiscordShowDeaths { get; set; } = true;
 
@@ -468,7 +478,7 @@ namespace Celeste.Mod.Core {
 
             TextMenu.Slider compatSlider = new TextMenu.Slider(Dialog.Clean("modoptions_coremodule_compatmode"),
                 i => Dialog.Clean($"modoptions_coremodule_compatmode_{Enum.GetName((Everest.CompatMode) i)}"),
-                0, Enum.GetValues<Everest.CompatMode>().Length-1, (int) CompatibilityMode
+                0, Enum.GetValues<Everest.CompatMode>().Length - 1, (int) CompatibilityMode
             );
             compatSlider.OnValueChange += val => CompatibilityMode = (Everest.CompatMode) val;
             menu.Add(compatSlider);
@@ -600,6 +610,30 @@ namespace Celeste.Mod.Core {
             showRoom.Disabled = !DiscordShowMap;
 
             menu.Add(submenu);
+        }
+
+        public void CreateMirrorPreferencesEntry(TextMenu menu, bool inGame) {
+            if (inGame) return;
+
+            List<string> mirrorPreferences = new List<string> {
+                "gb,jade,otobot,wegfan",
+                "jade,otobot,wegfan,gb",
+                "wegfan,otobot,jade,gb",
+                "otobot,jade,wegfan,gb"
+            };
+            List<string> dialogKeys = mirrorPreferences
+                .Select(setting => "MODOPTIONS_COREMODULE_MIRRORPREFERENCES_" + setting.Substring(0, setting.IndexOf(",")))
+                .ToList();
+
+            menu.Add(
+                new TextMenu.Slider(
+                    label: Dialog.Clean("MODOPTIONS_COREMODULE_MIRRORPREFERENCES"),
+                    values: index => Dialog.Clean(dialogKeys[index]),
+                    min: 0,
+                    max: mirrorPreferences.Count - 1,
+                    value: mirrorPreferences.IndexOf(MirrorPreferences)
+                ).Change(value => MirrorPreferences = mirrorPreferences[value])
+            );
         }
 
         public enum VanillaTristate {

@@ -425,9 +425,6 @@ namespace Celeste.Mod.UI {
             string downloadDestination = Path.Combine(Everest.PathGame, $"dependency-download.zip");
             try {
                 // 1. Download
-                LogLine(string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_DOWNLOADING"), mod.Name, mod.URL));
-                LogLine("", false);
-
                 Func<int, long, int, bool> progressCallback = (position, length, speed) => {
                     if (length > 0) {
                         Lines[Lines.Count - 1] = $"{((int) Math.Floor(100D * (position / (double) length)))}% @ {speed} KiB/s";
@@ -440,23 +437,36 @@ namespace Celeste.Mod.UI {
                     return true;
                 };
 
-                try {
-                    Everest.Updater.DownloadFileWithProgress(mod.URL, downloadDestination, progressCallback);
-                } catch (Exception e) when (e is WebException or TimeoutException) {
-                    Logger.Warn("OuiDependencyDownloader", $"Download failed, trying mirror {mod.MirrorURL}");
-                    Logger.LogDetailed(e);
+                Exception downloadException = null;
 
-                    Lines[Lines.Count - 1] = string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_DOWNLOADING_MIRROR"), mod.MirrorURL);
-                    LogLine("", false);
-                    Everest.Updater.DownloadFileWithProgress(mod.MirrorURL, downloadDestination, progressCallback);
+                foreach (string url in ModUpdaterHelper.GetAllMirrorUrls(mod.URL)) {
+                    try {
+                        downloadException = null;
+                        LogLine(string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_DOWNLOADING"), mod.Name, url));
+                        LogLine("", false);
+
+                        Everest.Updater.DownloadFileWithProgress(url, downloadDestination, progressCallback);
+
+                        ProgressMax = 0;
+                        Lines[Lines.Count - 1] = Dialog.Clean("DEPENDENCYDOWNLOADER_DOWNLOAD_FINISHED");
+
+                        // 2. Verify checksum
+                        LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_VERIFYING_CHECKSUM"));
+                        ModUpdaterHelper.VerifyChecksum(mod, downloadDestination);
+                        break; // out of the loop
+                    } catch (Exception e) when (e is WebException or TimeoutException or IOException) {
+                        downloadException = e;
+                        Logger.Warn("OuiDependencyDownloader", $"Download failed, trying another mirror");
+                        Logger.LogDetailed(e);
+                        Lines[Lines.Count - 1] = string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_DOWNLOADING_MIRROR"), "");
+                        continue; // to the next mirror
+                    }
                 }
 
-                ProgressMax = 0;
-                Lines[Lines.Count - 1] = Dialog.Clean("DEPENDENCYDOWNLOADER_DOWNLOAD_FINISHED");
-
-                // 2. Verify checksum
-                LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_VERIFYING_CHECKSUM"));
-                ModUpdaterHelper.VerifyChecksum(mod, downloadDestination);
+                if (downloadException != null) {
+                    ModUpdaterHelper.TryDelete(downloadDestination);
+                    throw downloadException;
+                }
 
                 // 3. Install mod
                 if (installedVersion != null) {
