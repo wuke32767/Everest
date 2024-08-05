@@ -136,7 +136,7 @@ namespace Celeste.Mod {
                                     File.WriteAllLines(cacheChecksumPath, checksums);
                             } catch (Exception e) {
                                 Logger.Warn("relinker", $"Failed relinking {meta} - {asmname}");
-                                e.LogDetailed();
+                                Logger.LogDetailed(e);
                                 return null;
                             }
                         }
@@ -172,7 +172,7 @@ namespace Celeste.Mod {
                     return meta.AssemblyContext.LoadRelinkedAssembly(cachePath);
                 } catch (Exception e) {
                     Logger.Warn("relinker", $"Failed loading cached assembly for {meta} - {asmName}");
-                    e.LogDetailed();
+                    Logger.LogDetailed(e);
                     return null;
                 }
             }
@@ -248,7 +248,7 @@ namespace Celeste.Mod {
                             modder.Write();
                         } catch (Exception e) when (!temporaryASM) {
                             Logger.Warn("relinker", "Couldn't write to intended output path - falling back to temporary file...");
-                            e.LogDetailed();
+                            Logger.LogDetailed(e);
 
                             // Try writing to a temporary file
                             temporaryASM = true;
@@ -273,7 +273,7 @@ namespace Celeste.Mod {
                     return meta.AssemblyContext.LoadRelinkedAssembly(outPath);
                 } catch (Exception e) {
                     Logger.Warn("relinker", $"Failed loading relinked assembly {meta} - {asmname}");
-                    e.LogDetailed();
+                    Logger.LogDetailed(e);
                     return null;
                 }
             }

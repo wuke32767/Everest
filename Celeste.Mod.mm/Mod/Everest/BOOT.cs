@@ -71,8 +71,9 @@ namespace Celeste.Mod {
                     Marshal.FreeHGlobal(heapAlloc);
                 }
 
-                // Load the compatibility mode setting
+                // Load the compatibility mode and colored logging settings
                 Everest.CompatibilityMode = Everest.CompatMode.None;
+                bool coloredLogging = true;
                 bool useExclusiveFullscreen = false;
                 try {
                     string path = patch_UserIO.GetSaveFilePath("modsettings-Everest");
@@ -88,11 +89,18 @@ namespace Celeste.Mod {
                             }
                             if (settings.TryGetValue(nameof(CoreModuleSettings.D3D11UseExclusiveFullscreen), out val))
                                 useExclusiveFullscreen = bool.Parse((string) val);
+                            if (settings.TryGetValue(nameof(CoreModuleSettings.ColorizedLogging), out val))
+                                coloredLogging = bool.Parse((string) val);
                         }
                     }
                 } catch (Exception ex) {
                     LogError("COMPAT-MODE-LOAD", ex);
                     goto Exit;
+                }
+
+                // Setup Windows VT support as early as possible, to avoid escape codes being printed
+                if (CoreModule.Settings.ColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
+                    Logger.Error("core", "Failed to enable Windows VT support!");
                 }
 
                 // Handle the compatibility modes here, so that vanilla is also affected
@@ -139,7 +147,7 @@ namespace Celeste.Mod {
         }
 
         public static void LogError(string tag, Exception e) {
-            e.LogDetailed(tag);
+            Logger.LogDetailed(e, tag);
 
             if (Debugger.IsAttached)
                 Debugger.Break();

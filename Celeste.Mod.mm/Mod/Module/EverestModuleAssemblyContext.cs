@@ -306,7 +306,7 @@ namespace Celeste.Mod {
                 Logger.Verbose("modasmctx", $"Started watching assembly folder: {asmDir}");
             } catch (Exception e) {
                 Logger.Warn("modasmctx", $"Failed watching assembly folder: {asmDir}");
-                e.LogDetailed();
+                Logger.LogDetailed(e);
                 watcher?.Dispose();
             }
         }
@@ -525,7 +525,7 @@ namespace Celeste.Mod {
                         globalAsmDef = ModuleDefinition.ReadModule(globalAsm.Location).Assembly;
                     } catch (Exception e) {
                         Logger.Warn("modasmctx", $"Failed to resolve global assembly definition '{asmName.FullName}'");
-                        e.LogDetailed();
+                        Logger.LogDetailed(e);
                     }
                 }
             
