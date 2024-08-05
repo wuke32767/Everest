@@ -99,6 +99,7 @@ namespace Celeste.Mod {
                 }
 
                 // Setup Windows VT support as early as possible, to avoid escape codes being printed
+                Logger.earlyBootColorizedLogging = coloredLogging;
                 if (CoreModule.Settings.ColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
                     Logger.Error("core", "Failed to enable Windows VT support!");
                 }

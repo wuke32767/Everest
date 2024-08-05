@@ -17,9 +17,15 @@ namespace Celeste.Mod {
         internal static TextWriter outWriter;
         internal static TextWriter logWriter;
 
+        // During the duration from startup until the core module is initialized, this value will be used as a fallback.
+        // It's initialized from BOOT.cs
+        internal static bool earlyBootColorizedLogging;
+
         private static Dictionary<string, LogLevel> minimumLevels = new Dictionary<string, LogLevel>();
         private static Dictionary<string, LogLevel> minimumLevelsFromEverestSettings = new Dictionary<string, LogLevel>();
         private static Dictionary<string, LogLevel> minimumLevelsCache = new Dictionary<string, LogLevel>();
+
+        private static bool ColorizedLogging => ((CoreModuleSettings)CoreModule.Instance?._Settings)?.ColorizedLogging ?? earlyBootColorizedLogging;
 
         /// <summary>
         /// Sets the minimum log level to be written in the logs for lines matching the given tag prefix.
@@ -143,7 +149,7 @@ namespace Celeste.Mod {
         /// <param name="str">The string / message to log.</param>
         public static void Log(LogLevel level, string tag, string str) {
             if (shouldLog(tag, level)) {
-                if (!CoreModule.Settings.ColorizedLogging) {
+                if (!ColorizedLogging) {
                     Console.WriteLine($"({DateTime.Now}) [Everest] [{level.FastToString()}] [{tag}] {str}");
                     return;
                 }
@@ -178,7 +184,7 @@ namespace Celeste.Mod {
         public static void LogDetailed(LogLevel level, string tag, string str) {
             if (shouldLog(tag, level)) {
                 Log(level, tag, str);
-                if (!CoreModule.Settings.ColorizedLogging) {
+                if (!ColorizedLogging) {
                     Console.WriteLine(new StackTrace(1, true).ToString());
                     return;
                 }
@@ -195,7 +201,7 @@ namespace Celeste.Mod {
         /// Print the exception to the console, including extended loading / reflection data useful for mods.
         /// </summary>
         public static void LogDetailed(/*this*/ Exception e, string tag = null) {
-            if (CoreModule.Settings.ColorizedLogging) {
+            if (ColorizedLogging) {
                 string colorText = LogLevel.Error.GetAnsiEscapeCodeForText();
                 outWriter.Write(colorText);
             }
@@ -223,7 +229,7 @@ namespace Celeste.Mod {
                 }
             }
 
-            if (CoreModule.Settings.ColorizedLogging) {
+            if (ColorizedLogging) {
                 const string colorReset = "\x1b[0m";
                 outWriter.Write(colorReset);
             }
