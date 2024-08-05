@@ -163,6 +163,7 @@ namespace Celeste.Mod {
                 string level_str = level.FastToString();
                 outWriter.WriteLine($"{colorFaint}({now_str}) [Everest] {colorReset}{colorLevel}[{level_str}] [{tag}] {colorText}{str}{colorReset}");
                 logWriter.WriteLine($"({now_str}) [Everest] [{level_str}] [{tag}] {str}");
+                logWriter.Flush();
             }
         }
 
@@ -194,6 +195,7 @@ namespace Celeste.Mod {
 
                 outWriter.WriteLine($"{colorText}{new StackTrace(1, true)}{colorReset}");
                 logWriter.WriteLine(new StackTrace(1, true).ToString());
+                logWriter.Flush();
             }
         }
 
