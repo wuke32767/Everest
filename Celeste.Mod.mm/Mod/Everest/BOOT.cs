@@ -98,11 +98,8 @@ namespace Celeste.Mod {
                     goto Exit;
                 }
 
-                // Setup Windows VT support as early as possible, to avoid escape codes being printed
+                // Store whether colores should be enabled before the core module is loaded
                 Logger.earlyBootColorizedLogging = coloredLogging;
-                if (coloredLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
-                    Logger.Error("core", "Failed to enable Windows VT support!");
-                }
 
                 // Handle the compatibility modes here, so that vanilla is also affected
                 if (Everest.CompatibilityMode == Everest.CompatMode.LegacyFNA) {

@@ -25,7 +25,7 @@ namespace Celeste.Mod {
         private static Dictionary<string, LogLevel> minimumLevelsFromEverestSettings = new Dictionary<string, LogLevel>();
         private static Dictionary<string, LogLevel> minimumLevelsCache = new Dictionary<string, LogLevel>();
 
-        private static bool ColorizedLogging => ((CoreModuleSettings)CoreModule.Instance?._Settings)?.ColorizedLogging ?? earlyBootColorizedLogging;
+        private static bool ColorizedLogging => (((CoreModuleSettings)CoreModule.Instance?._Settings)?.ColorizedLogging ?? earlyBootColorizedLogging) && outWriter != null && logWriter != null;
 
         /// <summary>
         /// Sets the minimum log level to be written in the logs for lines matching the given tag prefix.

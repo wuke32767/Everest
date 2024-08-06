@@ -179,6 +179,12 @@ namespace Celeste {
             using (LogWriter logWriter = new LogWriter(Console.Out, Console.Error, fileWriter)) {
                 Logger.outWriter = logWriter.STDOUT.Stream;
                 Logger.logWriter = logWriter.File;
+
+                // Setup Windows VT support as early as possible, to avoid escape codes being printed
+                if (Logger.earlyBootColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
+                    Logger.Error("core", "Failed to enable Windows VT support!");
+                }
+
                 MainInner(args);
             }
         }
