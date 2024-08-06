@@ -1,17 +1,24 @@
-﻿#pragma warning disable CS0626 // Method, operator, or accessor is marked external and has no attributes on it
-#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
-
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+﻿using Microsoft.Xna.Framework;
+using Mono.Cecil;
 using Monocle;
 using MonoMod;
-using System.Collections.Generic;
+using MonoMod.Cil;
+using MonoMod.InlineRT;
+using MonoMod.Utils;
+using System;
 
 namespace Celeste {
     class patch_TrailManager : TrailManager {
+#pragma warning disable CS0649 // Field is never assigned to, and will always have its default value
         private bool dirty;
         private Snapshot[] snapshots;
-        private static BlendState MaxBlendState;
+        private VirtualRenderTarget buffer;
+#pragma warning restore CS0649 // Field is never assigned to, and will always have its default value
+
+        [MonoModConstructor]
+        [MonoModIgnore]
+        [PatchTrailManagerConstructor]
+        public extern void ctor();
 
         public patch_TrailManager() : base() {
             // no-op. MonoMod ignores this - we only need this to make the compiler shut up.
@@ -23,76 +30,93 @@ namespace Celeste {
 
         [MonoModReplace]
         private void Dispose() {
-            if (buffers != null) {
-                for (int i = 0; i < buffers.Length; i++) {
-                    if (buffers[i] != null) {
-                        buffers[i].Dispose();
-                    }
-                    buffers[i] = null;
-                }
+            for (int i = 0; i < buffers.Length; i++) {
+                buffers[i]?.Dispose();
+                buffers[i] = null;
             }
-            buffers = null;
+            buffers = new VirtualRenderTarget[snapshots.Length];
         }
-        [MonoModReplace]
-        private void BeforeRender() {
-            if (!dirty) {
-                return;
+
+        [MonoModIgnore]
+        private extern void BeforeRender();
+
+        private void BeforeRenderPatch() {
+            if (!dirty) return;
+
+            Snapshot[] snapshotsBak = snapshots;
+            for (int i = 0; i < snapshotsBak.Length; i++) {
+                dirty = true;
+
+                snapshots = new Snapshot[snapshotsBak.Length];
+                snapshots[i] = snapshotsBak[i];
+
+                buffers[i] ??= VirtualContent.CreateRenderTarget("trail-manager-snapshot-" + i, 512, 512, false, true, 0);
+                buffer = buffers[i];
+
+                BeforeRender();
             }
-            buffers ??= new VirtualRenderTarget[snapshots.Length];
 
-            for (int i = 0; i < snapshots.Length; i++) {
-                if (snapshots[i] != null && !snapshots[i].Drawn) {
-                    patch_Snapshot snapshot = snapshots[i] as patch_Snapshot;
-                    VirtualRenderTarget buffer = buffers[i] ??= VirtualContent.CreateRenderTarget($"trail-manager-snapshot{i}", 512, 512, false, true, 0);
-
-                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, LightingRenderer.OccludeBlendState);
-                    Engine.Graphics.GraphicsDevice.SetRenderTarget(buffer);
-                    Draw.Rect(0, 0, buffer.Width, buffer.Height, Color.Transparent);
-
-                    Draw.SpriteBatch.End();
-                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.PointClamp, null, RasterizerState.CullNone);
-
-                    Vector2 value = new Vector2(buffer.Width, buffer.Height) * 0.5f - snapshot.Position;
-                    if (snapshot.Hair != null) {
-                        List<Vector2> nodes = snapshot.Hair.Nodes;
-                        for (int j = 0; j < nodes.Count; j++) {
-                            nodes[j] += value;
-                        }
-                        snapshot.Hair.Render();
-                        for (int k = 0; k < nodes.Count; k++) {
-                            nodes[k] -= value;
-                        }
-                    }
-                    Vector2 scale = snapshot.Sprite.Scale;
-                    snapshot.Sprite.Scale = snapshot.SpriteScale;
-                    snapshot.Sprite.Position += value;
-                    snapshot.Sprite.Render();
-                    snapshot.Sprite.Scale = scale;
-                    snapshot.Sprite.Position -= value;
-                    snapshot.Drawn = true;
-
-                    Draw.SpriteBatch.End();
-                    Draw.SpriteBatch.Begin(SpriteSortMode.Deferred, MaxBlendState);
-
-                    Draw.Rect(0, 0, buffer.Width, buffer.Height, Color.White);
-                    Draw.SpriteBatch.End();
-                }
-            }
+            snapshots = snapshotsBak;
             dirty = false;
+            buffer = null;
         }
+
         class patch_Snapshot : Snapshot {
             public patch_Snapshot() : base() {
                 // no-op. MonoMod ignores this - we only need this to make the compiler shut up.
             }
 
-            [MonoModReplace]
-            public override void Render() {
-                float scale = (Duration > 0f) ? (0.75f * (1f - Ease.CubeOut(Percent))) : 1f;
-                VirtualRenderTarget buffer = (Manager as patch_TrailManager).buffers[Index];
-                if (buffer != null) {
-                    Draw.SpriteBatch.Draw(buffer, Position, null, Color * scale, 0f, new Vector2(buffer.Width, buffer.Height) * 0.5f, Vector2.One, SpriteEffects.None, 0f);
-                }
-            }
+            [MonoModIgnore]
+            [PatchTrailManagerSnapshotRender]
+            public new extern void Render();
+        }
+    }
+}
+
+namespace MonoMod {
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchTrailManagerConstructor))]
+    class PatchTrailManagerConstructorAttribute : Attribute {
+    }
+
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchTrailManagerSnapshotRender))]
+    class PatchTrailManagerSnapshotRenderAttribute : Attribute {
+    }
+
+    static partial class MonoModRules {
+        public static void PatchTrailManagerConstructor(ILContext context, CustomAttribute attrib) {
+            TypeDefinition t_VirtualRenderTarget = MonoModRule.Modder.Module.GetType("Monocle.VirtualRenderTarget");
+
+            TypeDefinition t_TrailManager = MonoModRule.Modder.Module.GetType("Celeste.TrailManager");
+            FieldReference m_TrailManager_buffers = t_TrailManager.FindField("buffers");
+            MethodReference m_TrailManager_BeforeRenderPatch = t_TrailManager.FindMethod("BeforeRenderPatch");
+
+            ILCursor cursor = new ILCursor(context);
+
+            // buffers = new VirtualRenderTarget[64];
+            cursor.EmitLdarg0();
+            cursor.EmitLdcI4(64);
+            cursor.EmitNewarr(t_VirtualRenderTarget);
+            cursor.EmitStfld(m_TrailManager_buffers);
+
+            cursor.GotoNext(instr => instr.MatchLdftn("Celeste.TrailManager", "BeforeRender"));
+            cursor.Next.Operand = m_TrailManager_BeforeRenderPatch;
+        }
+
+        public static void PatchTrailManagerSnapshotRender(ILContext context, CustomAttribute attrib) {
+            TypeDefinition t_TrailManager = MonoModRule.Modder.Module.GetType("Celeste.TrailManager");
+            FieldReference m_TrailManager_buffers = t_TrailManager.FindField("buffers");
+
+            FieldReference f_Snapshot_Index = context.Method.DeclaringType.FindField("Index");
+
+            ILCursor cursor = new ILCursor(context);
+
+            // buffer => buffers[Index]
+            cursor.GotoNext(instr => instr.MatchLdfld("Celeste.TrailManager", "buffer"));
+            cursor.Remove();
+            cursor.EmitLdfld(m_TrailManager_buffers);
+            cursor.EmitLdarg0();
+            cursor.EmitLdfld(f_Snapshot_Index);
+            cursor.EmitLdelemRef();
         }
     }
 }
