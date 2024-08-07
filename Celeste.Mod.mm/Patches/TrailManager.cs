@@ -6,6 +6,7 @@ using MonoMod.Cil;
 using MonoMod.InlineRT;
 using MonoMod.Utils;
 using System;
+using System.Reflection.Emit;
 
 namespace Celeste {
     class patch_TrailManager : TrailManager {
@@ -176,11 +177,9 @@ namespace MonoMod {
             cursor.RemoveRange(6);
             cursor.EmitLdcI4(0);
             cursor.Remove();
-            cursor.EmitLdloc0();
-            cursor.EmitCallvirt(m_VirtualAsset_Width);
+            cursor.EmitLdcI4(512); // Direct emit (512), because i didn't figure out how to emit (buffer?.Width ?? 512)
             cursor.Remove();
-            cursor.EmitLdloc0();
-            cursor.EmitCallvirt(m_VirtualAsset_Height);
+            cursor.EmitLdcI4(512);
 
             // new Vector2(64f, 64f) => (buffer.Width, buffer.Height)
             cursor.GotoNext(instr => instr.MatchCall("Monocle.Draw", "get_SpriteBatch"));
