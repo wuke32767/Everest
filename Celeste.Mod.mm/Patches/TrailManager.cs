@@ -6,9 +6,6 @@ using MonoMod.Cil;
 using MonoMod.InlineRT;
 using MonoMod.Utils;
 using System;
-using Celeste.Mod;
-using Logger = Celeste.Mod.Logger;
-using System.Reflection.Emit;
 
 namespace Celeste {
     class patch_TrailManager : TrailManager {
