@@ -45,8 +45,8 @@ namespace Celeste {
         [MonoModConstructor]
         public void ctor(EntityID id, EntityData data, Vector2 offset) {
             orig_ctor(id, data, offset);
-            this.angleFix = data.Bool("angle_fix");
-            this.angleFixMaxRotation = MathF.Abs(data.Float("angle_fix_max_rotation_speed").ToRad());
+            this.angleFix = data.Bool("angleFix");
+            this.angleFixMaxRotation = MathF.Abs(data.Float("angleFixMaxRotation").ToRad());
         }
 
 #pragma warning disable CS0626
