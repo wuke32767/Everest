@@ -121,10 +121,17 @@ namespace Celeste.Mod {
 
         internal static bool _ContentLoaded;
 
-        /// <summary>
-        /// The hasher used to determine the mod and installation hashes.
-        /// </summary>
-        public readonly static HashAlgorithm ChecksumHasher = XXHash64.Create();
+        public static byte[] ComputeHash(byte[] buffer) {
+            using (HashAlgorithm checksumHasher = XXHash64.Create()) {
+                return checksumHasher.ComputeHash(buffer);
+            }
+        }
+
+        public static byte[] ComputeHash(Stream inputStream) {
+            using (HashAlgorithm checksumHasher = XXHash64.Create()) {
+                return checksumHasher.ComputeHash(inputStream);
+            }
+        }
 
         /// <summary>
         /// Get the checksum for a given file.
@@ -133,7 +140,7 @@ namespace Celeste.Mod {
         /// <returns>A checksum.</returns>
         public static byte[] GetChecksum(string path) {
             using (FileStream fs = File.OpenRead(path))
-                return ChecksumHasher.ComputeHash(fs);
+                return ComputeHash(fs);
         }
 
         /// <summary>
@@ -165,7 +172,7 @@ namespace Celeste.Mod {
 
             long pos = stream.Position;
             stream.Seek(0, SeekOrigin.Begin);
-            byte[] hash = ChecksumHasher.ComputeHash(stream);
+            byte[] hash = ComputeHash(stream);
             stream.Seek(pos, SeekOrigin.Begin);
             return hash;
         }
@@ -185,7 +192,7 @@ namespace Celeste.Mod {
                 }
                 */
                 void AddStream(Stream stream) {
-                    data.AddRange(ChecksumHasher.ComputeHash(stream));
+                    data.AddRange(ComputeHash(stream));
                 }
 
                 // Add all mod containers (or .DLLs).
@@ -208,7 +215,7 @@ namespace Celeste.Mod {
                 }
 
                 // Return the final hash.
-                return _InstallationHash = ChecksumHasher.ComputeHash(data.ToArray());
+                return _InstallationHash = ComputeHash(data.ToArray());
             }
         }
         public static string InstallationHashShort {
