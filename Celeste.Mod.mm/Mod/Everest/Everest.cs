@@ -122,13 +122,13 @@ namespace Celeste.Mod {
         internal static bool _ContentLoaded;
 
         public static byte[] ComputeHash(byte[] buffer) {
-            try (HashAlgorithm checksumHasher = XXHash64.Create()) {
+            using (HashAlgorithm checksumHasher = XXHash64.Create()) {
                 return checksumHasher.ComputeHash(buffer);
             }
         }
 
         public static byte[] ComputeHash(Stream inputStream) {
-            try (HashAlgorithm checksumHasher = XXHash64.Create()) {
+            using (HashAlgorithm checksumHasher = XXHash64.Create()) {
                 return checksumHasher.ComputeHash(inputStream);
             }
         }
