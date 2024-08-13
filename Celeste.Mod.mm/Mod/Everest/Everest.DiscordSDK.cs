@@ -268,7 +268,7 @@ namespace Celeste.Mod {
                         return IconBaseURL + "/rich-presence-icons-static/null.png";
                     }
                 } else {
-                    byte[] hash = ChecksumHasher.ComputeHash(icon.Data);
+                    byte[] hash = ComputeHash(icon.Data);
                     string hashString = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
                     if (RichPresenceIcons.Contains(hashString)) {
                         return IconBaseURL + "/rich-presence-icons/" + hashString + ".png";
