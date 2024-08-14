@@ -9,9 +9,25 @@ using System;
 
 namespace Celeste {
     public class patch_Spikes : Spikes {
-        public patch_Spikes(Vector2 position, int size, Directions direction, string type) 
+        public patch_Spikes(Vector2 position, int size, Directions direction, string type)
             : base(position, size, direction, type) {
             // no-op. MonoMod ignores this - we only need this to make the compiler shut up.
+        }
+
+        [MonoModConstructor]
+        [MonoModIgnore]
+        public extern void ctor(Vector2 position, int size, Directions direction, string type);
+
+        [MonoModIgnore]
+        private static extern int GetSize(EntityData data, Directions dir);
+
+        [MonoModConstructor]
+        [MonoModReplace]
+        public void ctor(EntityData data, Vector2 offset, Directions dir) {
+            ctor(data.Position + offset, GetSize(data, dir), dir, data.Attr("type", "default"));
+
+            if (!data.Bool("attachToSolid", defaultValue: true))
+                Remove(Get<StaticMover>());
         }
 
         [MonoModIgnore]
