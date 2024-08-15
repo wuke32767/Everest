@@ -1,6 +1,4 @@
-﻿using Celeste.Mod.Backdrops;
-using Celeste.Mod.Core;
-using Celeste.Mod.Entities;
+﻿using Celeste.Mod.Core;
 using Celeste.Mod.Helpers;
 using Celeste.Mod.Helpers.LegacyMonoMod;
 using Celeste.Mod.UI;
@@ -14,7 +12,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -120,6 +117,9 @@ namespace Celeste.Mod {
         internal static bool RestartVanilla;
 
         internal static bool _ContentLoaded;
+
+        [Obsolete("Use the ComputeHash methods instead. They will reach stable on Sep 7, and this field will be removed in the following stable on Oct 5.")]
+        public readonly static HashAlgorithm ChecksumHasher = XXHash64.Create();
 
         public static byte[] ComputeHash(byte[] buffer) {
             using (HashAlgorithm checksumHasher = XXHash64.Create()) {
@@ -276,7 +276,7 @@ namespace Celeste.Mod {
 
                 else if (arg == "--debugger")
                     Debugger.Launch();
-                    
+
                 else if (arg == "--debugger-attach") {
                     Logger.Info("Everest", "Waiting for debugger to attach...");
                     while (!Debugger.IsAttached) { }
@@ -304,7 +304,7 @@ namespace Celeste.Mod {
                     if (Enum.TryParse(queue.Dequeue(), ignoreCase: true, out LogLevel level))
                         Logger.SetLogLevelFromSettings("", level);
                 }
-                
+
                 else if (arg == "--use-scancodes") {
                     Environment.SetEnvironmentVariable("FNA_KEYBOARD_USE_SCANCODES", "1");
                 }
@@ -412,7 +412,7 @@ namespace Celeste.Mod {
                 RegisterModDetour(owner, info, info.Undo);
             };
             DetourManager.ILHookUndone += UnregisterModDetour;
-            
+
             DetourManager.NativeDetourApplied += info => {
                 if (GetHookOwner(out _) is not Assembly owner)
                     return;
@@ -536,7 +536,7 @@ namespace Celeste.Mod {
 
         internal static void Dispose(object sender, EventArgs args) {
             Audio.Unload(); // This exists but never gets called by the vanilla game.
-            
+
             foreach (ConcurrentDictionary<object, Action> detours in _ModDetours.Values)
                 foreach (Action detourUndo in detours.Values)
                     detourUndo();
@@ -707,7 +707,7 @@ namespace Celeste.Mod {
                                     // all dependencies are loaded, all optional dependencies are either loaded or won't load => we're good to go!
                                     Logger.Info("core", $"Dependencies of mod {entry.Item1} are now satisfied: loading");
                                     EverestSplashHandler.IncreaseLoadedModCount(entry.Item1.Name); // Notify the splash
-                                    
+
                                     if (Everest.Modules.Any(mod => mod.Metadata.Name == entry.Item1.Name)) {
                                         // a duplicate of the mod was loaded while it was sitting in the delayed list.
                                         Logger.Warn("core", $"Mod {entry.Item1.Name} already loaded!");
@@ -774,7 +774,7 @@ namespace Celeste.Mod {
         internal static void Unregister(this EverestModule module) {
             module.OnInputDeregister();
             module.Unload();
-    
+
             // TODO: Unload from LuaLoader
             // TODO: Unload from EntityLoaders
             // TODO: Undo event listeners
