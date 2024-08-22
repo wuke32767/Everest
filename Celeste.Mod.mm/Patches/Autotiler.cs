@@ -82,12 +82,12 @@ namespace Celeste {
             if (xml.HasAttr("debris"))
                 data.Debris = xml.Attr("debris");
 
-            if (xml.HasAttr("ignoreOverrides")) {
-                string[] array = xml.Attr("ignoreOverrides").Split(',');
+            if (xml.HasAttr("ignoreExceptions")) {
+                string[] array = xml.Attr("ignoreExceptions").Split(',');
 
                 foreach (string text in array)
 					if (text.Length > 0)
-						data.IgnoreOverrides.Add(text[0]);
+						data.IgnoreExceptions.Add(text[0]);
             }
         }
 
@@ -399,7 +399,7 @@ namespace Celeste {
             public char ID;
 
             public HashSet<char> Ignores;
-            public HashSet<char> IgnoreOverrides;
+            public HashSet<char> IgnoreExceptions;
 
             public List<patch_Masked> Masked;
             public patch_Tiles Center;
@@ -419,7 +419,7 @@ namespace Celeste {
             public void ctor(char id) {
                 orig_ctor(id);
 
-                IgnoreOverrides = new HashSet<char>();
+                IgnoreExceptions = new HashSet<char>();
 
                 whitelists = new Dictionary<byte, string>();
                 blacklists = new Dictionary<byte, string>();
@@ -427,7 +427,7 @@ namespace Celeste {
 
             [MonoModReplace]
             public bool Ignore(char c) {
-                if (ID == c || IgnoreOverrides.Contains(c))
+                if (ID == c || IgnoreExceptions.Contains(c))
                     return false;
 
                 return Ignores.Contains('*') || Ignores.Contains(c);
