@@ -214,14 +214,11 @@ namespace Celeste {
             // merge metadata, with .meta.yaml taking priority
             metaParsed = MapMeta.Add(metaParsedFromFile, metaParsed);
 
-            // merge metadata with the existing meta, with the previously merged metadata taking priority
-            MapMeta combinedMeta = MapMeta.Add(metaParsed, area.Meta);
-
             // apply metadata to AreaData
             if (mode == AreaMode.Normal) {
-                combinedMeta.ApplyTo(area);
-                for (int i = 0; i < combinedMeta.Modes.Length; i++) {
-                    combinedMeta.Modes[i]?.ApplyTo(area, (AreaMode) i);
+                metaParsed.ApplyTo(area);
+                for (int i = 0; i < metaParsed.Modes.Length; i++) {
+                    metaParsed.Modes[i]?.ApplyTo(area, (AreaMode) i);
                 }
                 Area = area.ToKey();
 
@@ -236,6 +233,7 @@ namespace Celeste {
                     Dreaming = area.Dreaming
                 };
             } else {
+                MapMeta combinedMeta = MapMeta.Add(metaParsed, area.Meta);
                 area.Mode[(int) mode].MapMeta = combinedMeta;
                 combinedMeta.Modes[(int) mode]?.ApplyTo(area, mode);
             }
