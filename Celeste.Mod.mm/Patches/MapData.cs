@@ -30,8 +30,8 @@ namespace Celeste {
                 MapMeta metaAll = patch_AreaData.Get(Area).Meta;
                 return
                     (metaAll?.Modes?.Length ?? 0) > (int) Area.Mode ?
-                        metaAll.Modes[(int) Area.Mode] :
-                        null;
+                    metaAll.Modes[(int) Area.Mode] :
+                    null;
             }
         }
 
@@ -195,11 +195,11 @@ namespace Celeste {
             MapMeta metaParsed = null;
 
             // load metadata from .meta.yaml file
-            string path = $"Maps/{area.Mode[(int) mode].Path}";
+            string path = $"Maps/{area.Mode[(int)mode].Path}";
             if (Everest.Content.TryGet(path, out ModAsset asset)) {
                 metaParsedFromFile = asset.GetMeta<MapMeta>();
                 if (metaParsedFromFile != null) {
-                    metaParsedFromFile.Modes[(int) mode] = MapMetaModeProperties.Add(metaParsedFromFile.Mode, metaParsedFromFile.Modes[(int) mode]);
+                    metaParsedFromFile.Modes[(int)mode] = MapMetaModeProperties.Add(metaParsedFromFile.Mode, metaParsedFromFile.Modes[(int)mode]);
                     metaParsedFromFile.Mode = null;
                 }
             }
@@ -207,7 +207,7 @@ namespace Celeste {
             // load metadata from .bin file
             if (meta != null) {
                 metaParsed = new MapMeta(meta);
-                metaParsed.Modes[(int) mode] = MapMetaModeProperties.Add(metaParsed.Mode, metaParsed.Modes[(int) mode]);
+                metaParsed.Modes[(int)mode] = MapMetaModeProperties.Add(metaParsed.Mode, metaParsed.Modes[(int)mode]);
                 metaParsed.Mode = null;
             }
 
@@ -217,9 +217,7 @@ namespace Celeste {
             // apply metadata to AreaData
             if (mode == AreaMode.Normal) {
                 metaParsed.ApplyTo(area);
-                for (int i = 0; i < metaParsed.Modes.Length; i++) {
-                    metaParsed.Modes[i]?.ApplyTo(area, (AreaMode) i);
-                }
+                metaParsed.Modes[(int)mode]?.ApplyTo(area, mode);
                 Area = area.ToKey();
 
                 // Backup A-Side's Metadata. Only back up useful data.
@@ -234,8 +232,8 @@ namespace Celeste {
                 };
             } else {
                 MapMeta combinedMeta = MapMeta.Add(metaParsed, area.Meta);
-                area.Mode[(int) mode].MapMeta = combinedMeta;
-                combinedMeta.Modes[(int) mode]?.ApplyTo(area, mode);
+                area.Mode[(int)mode].MapMeta = combinedMeta;
+                combinedMeta.Modes[(int)mode]?.ApplyTo(area, mode);
             }
         }
 
@@ -290,7 +288,6 @@ namespace Celeste {
             }
         }
     }
-
     public static class MapDataExt {
 
         // Mods can't access patch_ classes directly.
