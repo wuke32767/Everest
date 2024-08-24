@@ -300,21 +300,12 @@ namespace Celeste {
             // Sort areas.
             Areas.Sort(AreaComparison);
 
-            // Remove AreaDatas which are now a mode of another AreaData.
-            // This can happen late as the map data (.bin) can contain additional metadata.
             for (int i = 0; i < Areas.Count; i++) {
+                // Check for .bins possibly belonging to A side .bins by their path and lack of existing modes.
                 patch_AreaData area = Areas[i];
                 string path = area.Mode[0].Path;
-                int otherIndex = Areas.FindIndex(other => other.Mode.Any(otherMode => otherMode?.Path == path));
-                if (otherIndex != -1 && otherIndex != i) {
-                    Areas.RemoveAt(i);
-                    i--;
-                    continue;
-                }
-
                 ParseName(path, out int? order, out AreaMode side, out string name);
 
-                // Also check for .bins possibly belonging to A side .bins by their path and lack of existing modes.
                 for (int ii = 0; ii < Areas.Count; ii++) {
                     patch_AreaData other = Areas[ii];
                     ParseName(other.Mode[0].Path, out int? otherOrder, out AreaMode otherSide, out string otherName);
@@ -338,6 +329,12 @@ namespace Celeste {
                 patch_AreaData area = Areas[i];
                 area.ID = i;
 
+                // Add the A side MapData or update its area key.
+                if (area.Mode[0].MapData != null)
+                    area.Mode[0].MapData.Area = area.ToKey();
+                else
+                    area.Mode[0].MapData = new patch_MapData(area.ToKey());
+
                 // Clean up non-existing modes.
                 int modei = 0;
                 for (; modei < area.Mode.Length; modei++) {
@@ -348,14 +345,6 @@ namespace Celeste {
                 Array.Resize(ref area.Mode, modei);
 
                 Logger.Verbose("AreaData", string.Format("{0}: {1} - {2} sides", i, area.SID, area.Mode.Length));
-
-                // Update old MapData areas and load any new areas.
-
-                // Add the A side MapData or update its area key.
-                if (area.Mode[0].MapData != null)
-                    area.Mode[0].MapData.Area = area.ToKey();
-                else
-                    area.Mode[0].MapData = new patch_MapData(area.ToKey());
 
                 if (area.IsInterludeUnsafe())
                     continue;
@@ -378,6 +367,22 @@ namespace Celeste {
                     else
                         area.Mode[mode].MapData = new patch_MapData(area.ToKey((AreaMode) mode));
                 }
+            }
+
+            for (int i = 0; i < Areas.Count; i++) {
+                // Remove AreaDatas which are now a mode of another AreaData.
+                // This can happen late as the map data (.bin) can contain additional metadata.
+                patch_AreaData area = Areas[i];
+                string path = area.Mode[0].Path;
+                int otherIndex = Areas.FindIndex(other => other.Mode.Any(otherMode => otherMode?.Path == path));
+                if (otherIndex != -1 && otherIndex != i) {
+                    Logger.Verbose("AreaData", $"Removing area {i} since it has the same path {path} as one of area {otherIndex}'s modes");
+                    Areas.RemoveAt(i);
+                    i--;
+                }
+            }
+            for (int i = 0; i < Areas.Count; i++) {
+                Areas[i].ID = i;
             }
 
             // Load custom mountains
