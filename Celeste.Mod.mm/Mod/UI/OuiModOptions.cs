@@ -203,10 +203,17 @@ namespace Celeste.Mod.UI {
                 List<TextMenu.Item> menuItems = ((patch_TextMenu) menu).Items;
 
                 bool searchNextPredicate(TextMenu.Item item) {
+                    if (!item.Visible || !item.Selectable || item.Disabled)
+                        return false;
+                    int index = menu.IndexOf(item);
+                    if (index > 1 && (menu as patch_TextMenu).Items[index - 1] is patch_TextMenu.patch_SubHeader subHeader) {
+                        if (subHeader.Title != null && subHeader.Title.ToLower().Contains(searchTarget)) {
+                            return true;
+                        }
+                    }
                     string searchLabel = ((patch_TextMenu.patch_Item) item).SearchLabel();
-                    return item.Visible && item.Selectable && !item.Disabled && searchLabel != null && searchLabel.ToLower().Contains(searchTarget);
+                    return searchLabel != null && searchLabel.ToLower().Contains(searchTarget);
                 }
-
 
                 if (TextMenuExt.TextBox.WrappingLinearSearch(menuItems, searchNextPredicate, menu.Selection + (inReverse ? -1 : 1), inReverse, out int targetSelectionIndex)) {
                     if (targetSelectionIndex >= menu.Selection) {
