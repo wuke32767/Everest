@@ -206,7 +206,7 @@ namespace Celeste.Mod.UI {
                     if (!item.Visible || !item.Selectable || item.Disabled)
                         return false;
                     int index = menu.IndexOf(item);
-                    if (index > 1 && (menu as patch_TextMenu).Items[index - 1] is patch_TextMenu.patch_SubHeader subHeader) {
+                    if (index > 0 && (menu as patch_TextMenu).Items[index - 1] is patch_TextMenu.patch_SubHeader subHeader) {
                         if (subHeader.Title != null && subHeader.Title.ToLower().Contains(searchTarget)) {
                             return true;
                         }
