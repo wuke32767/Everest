@@ -145,7 +145,10 @@ namespace Celeste.Mod {
                     Environment.SetEnvironmentVariable("EVEREST_SKIP_REQUEST_FOCUS_AFTER_SPLASH", "1");
                 }
                 if (splashPipeServerStream == null) return; // If the splash never ran, no-op
-                if (!splashPipeServerStreamConnection.IsCompleted || !lastFlush.IsCompletedSuccessfully) {
+                if (!splashPipeServerStreamConnection.IsCompleted // Exact same checks from `SendMessageToSplash`
+                    || !splashPipeServerStream.IsConnected 
+                    || (lastFlush != null && 
+                        !lastFlush.IsCompletedSuccessfully)) {
                     Logger.Error("EverestSplash", "Could not connect to splash");
                     if (!splashProcess.HasExited) { // if it hangs up, just kill it
                         splashProcess.Kill();
