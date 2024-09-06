@@ -40,6 +40,7 @@ namespace Monocle {
         }
 
         private static readonly FieldInfo f_Game_RunApplication = typeof(Game).GetField("RunApplication", BindingFlags.NonPublic | BindingFlags.Instance);
+        private static readonly FieldInfo f_Game_hasInitialized = typeof(Game).GetField("hasInitialized", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo m_Game_RunLoop = typeof(Game).GetMethod("RunLoop", BindingFlags.NonPublic | BindingFlags.Instance);
         private static readonly MethodInfo m_Game_AfterLoop = typeof(Game).GetMethod("AfterLoop", BindingFlags.NonPublic | BindingFlags.Instance);
 
@@ -57,10 +58,15 @@ namespace Monocle {
                 }
             } catch (Exception ex) {
                 if (continueLoop && ex is TargetInvocationException)
-                    ex = ex.InnerException;
+                    // TargetInvocationException always has a non-null InnerException
+                    ex = ex.InnerException!;
 
                 // Try to handle the error by opening an in-game handler first (unless the exception occurred while exiting)
-                if ((bool) f_Game_RunApplication.GetValue(this)) {
+                // also, make sure the game has initialized, else the crash handler will... crash. (how ironic)
+                bool isExiting = !(bool) f_Game_RunApplication.GetValue(this)!;
+                bool hasInitialized = (bool) f_Game_hasInitialized.GetValue(this)!;
+
+                if (!isExiting && hasInitialized) {
                     ExceptionDispatchInfo dispatch = CriticalErrorHandler.HandleCriticalError(ExceptionDispatchInfo.Capture(ex));
                     if (dispatch == null)  {
                         // Restart the update loop
