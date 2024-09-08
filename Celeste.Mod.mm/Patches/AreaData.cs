@@ -297,9 +297,6 @@ namespace Celeste {
                 }
             }
 
-            // Sort areas.
-            Areas.Sort(AreaComparison);
-
             for (int i = 0; i < Areas.Count; i++) {
                 // Check for .bins possibly belonging to A side .bins by their path and lack of existing modes.
                 patch_AreaData area = Areas[i];
@@ -368,6 +365,9 @@ namespace Celeste {
                         area.Mode[mode].MapData = new patch_MapData(area.ToKey((AreaMode) mode));
                 }
             }
+            
+            // Sort areas.
+            Areas.Sort(AreaComparison);
 
             for (int i = 0; i < Areas.Count; i++) {
                 // Remove AreaDatas which are now a mode of another AreaData.
