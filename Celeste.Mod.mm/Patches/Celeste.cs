@@ -15,6 +15,7 @@ using System.Threading;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod.Cil;
+using MonoMod.Utils;
 using System.Text.RegularExpressions;
 using System.Text;
 using System.Reflection;
@@ -394,6 +395,48 @@ namespace MonoMod {
                 cursor.Next.OpCode = OpCodes.Ldstr;
                 cursor.Next.Operand = "Windows";
             }
+
+            cursor.Index = 0;
+
+            // remove the redundant Console.WriteLine(Exception) - ErrorLog.Write(Exception) already logs the error for us
+            if (!cursor.TryGotoNext(
+                static instr => instr.MatchDup(),
+                static instr => instr.MatchCallvirt("System.Object", "ToString"),
+                static instr => instr.MatchCall("System.Console", "WriteLine")
+            ))
+                throw new Exception(
+                    $"Could not find [dup], [callvirt instance string System.Object::ToString()], [call void System.Console::WriteLine(string)] in {context.Method.FullName}!");
+
+            // nop the writeline out
+            // cannot remove instructions because this will cause an invalid program
+            // (seems to be related to the try/catch blocks, didn't investigate further)
+            for (int i = 0; i < 3; i++) {
+                cursor.Next.OpCode = OpCodes.Nop;
+                cursor.Next.Operand = null;
+                cursor.Index++;
+            }
+
+            // log the exception to log.txt if opening the error log fails so that we have something to investigate
+            if (!cursor.TryGotoNext(static instr => instr.MatchLdstr("Failed to open the log!")))
+                throw new Exception(
+                    $"Could not find [ldstr \"Failed to open the log!\"] in {context.Method.FullName}!");
+
+            // capture the previously thrown away exception when failing to open the error log
+            context.Body.ExceptionHandlers[0].CatchType = context.Import(typeof(Exception));
+            cursor.Prev.OpCode = OpCodes.Ldstr;  // previously a pop
+            cursor.Prev.Operand = "ErrorLog";
+
+            TypeDefinition logger = RulesModule.GetType("Celeste.Mod", "Logger");
+
+            // replace the Console.WriteLine with a Logger.Error
+            cursor.Index++;
+            cursor.Next.Operand = context.Module.ImportReference(logger.FindMethod("Error"));
+
+            // add a Logger.LogDetailed
+            // (exception still on the stack)
+            cursor.Index++;
+            cursor.EmitLdnull();
+            cursor.EmitCall(context.Module.ImportReference(logger.FindMethod("System.Void LogDetailed(System.Exception,System.String)")));
         }
 
     }
