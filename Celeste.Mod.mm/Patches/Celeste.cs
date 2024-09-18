@@ -118,6 +118,7 @@ namespace Celeste {
                 }
             }
 
+            bool allocedConsole = false;
             if (args.Contains("--console") && RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
                 AllocConsole();
 
@@ -125,6 +126,8 @@ namespace Celeste {
                 typeof(Console).GetField("s_in", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
                 typeof(Console).GetField("s_out", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
                 typeof(Console).GetField("s_error", BindingFlags.NonPublic | BindingFlags.Static).SetValue(null, null);
+
+                allocedConsole = true;
             }
 
             if (args.Contains("--nolog")) {
@@ -182,7 +185,7 @@ namespace Celeste {
                 Logger.logWriter = logWriter.File;
 
                 // Setup Windows VT support as early as possible, to avoid escape codes being printed
-                if (Logger.earlyBootColorizedLogging && RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !Logger.TryEnableWindowsVTSupport()) {
+                if (allocedConsole && Logger.earlyBootColorizedLogging && !Logger.TryEnableWindowsVTSupport()) {
                     Logger.Error("core", "Failed to enable Windows VT support!");
                 }
 
