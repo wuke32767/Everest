@@ -41,10 +41,10 @@ namespace Celeste {
                     Everest.Events.Level.Enter(session, fromSaveData);
                 } catch (Exception e) {
                     string sid = session?.Area.GetSID() ?? "???";
-                    string map_name = session?.Area != null && Dialog.Has(map_name = AreaData.Get(session.Area).Name) ? $" [{Dialog.Clean(map_name, Dialog.Languages["english"])}]" : null;
+                    string mapName = session?.Area != null && Dialog.Has(mapName = AreaData.Get(session.Area).Name) ? $" [{Dialog.Clean(mapName, Dialog.Languages["english"])}]" : null;
                     if (session?.Area.Mode > 0)
-                        map_name = map_name + $" [{session.Area.Mode}]";
-                    Logger.Warn("LevelEnter", $"Failed entering map {sid}{map_name}");
+                        mapName = mapName + $" [{session.Area.Mode}]";
+                    Logger.Warn("LevelEnter", $"Failed entering map {sid}{mapName}");
                     Logger.LogDetailed(e);
 
                     ErrorMessage = Dialog.Get("postcard_levelloadfailed").Replace("((sid))", sid);

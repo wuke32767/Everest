@@ -244,15 +244,15 @@ namespace Celeste {
                 && mapMeta.IntroType is Player.IntroTypes introType)
                 playerIntro = introType;
 
-            string map_name = Dialog.Has(map_name = AreaData.Get(Session.Area).Name) ? $" [{Dialog.Clean(map_name, Dialog.Languages["english"])}]" : null;
+            string mapName = Dialog.Has(mapName = AreaData.Get(Session.Area).Name) ? $" [{Dialog.Clean(mapName, Dialog.Languages["english"])}]" : null;
             if (Session.Area.Mode > 0)
-                map_name = map_name + $" [{Session.Area.Mode}]";
+                mapName = mapName + $" [{Session.Area.Mode}]";
             try {
                 if (string.IsNullOrEmpty(Session.Level)) {
                     patch_LevelEnter.ErrorMessage = Dialog.Get("postcard_levelnorooms");
                     throw new NullReferenceException("Current map has no rooms.");
                 }
-                Logger.Verbose("LoadLevel", $"Loading room {Session.LevelData.Name} of '{Session.Area.GetSID()}{map_name}'");
+                Logger.Verbose("LoadLevel", $"Loading room {Session.LevelData.Name} of '{Session.Area.GetSID()}{mapName}'");
 
                 orig_LoadLevel(playerIntro, isFromLoader);
 
@@ -284,7 +284,7 @@ namespace Celeste {
                     }
                 }
 
-                Logger.Warn("LoadLevel", $"Failed loading room {Session.Level} of '{Session.Area.GetSID()}{map_name}'");
+                Logger.Warn("LoadLevel", $"Failed loading room {Session.Level} of '{Session.Area.GetSID()}{mapName}'");
                 Logger.LogDetailed(e);
                 return;
             }

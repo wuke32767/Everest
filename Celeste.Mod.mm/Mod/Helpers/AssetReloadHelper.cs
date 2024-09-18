@@ -249,11 +249,11 @@ namespace Celeste.Mod {
                         patch_Level.RegisterLoadOverride(loader.Level, loadOvr);
                     } catch (Exception ex) {
                         string sid = lvl.Session?.Area.GetSID() ?? "NULL";
-                        string map_name = lvl.Session?.Area != null && Dialog.Has(map_name = AreaData.Get(lvl.Session.Area).Name) ? $" [name: {Dialog.Clean(map_name, Dialog.Languages["english"])}]" : null;
+                        string mapName = lvl.Session?.Area != null && Dialog.Has(mapName = AreaData.Get(lvl.Session.Area).Name) ? $" [name: {Dialog.Clean(mapName, Dialog.Languages["english"])}]" : null;
                         if (lvl.Session?.Area.Mode > 0)
-                            map_name = map_name + $" [{lvl.Session.Area.Mode}]";
+                            mapName = mapName + $" [{lvl.Session.Area.Mode}]";
 
-                        Logger.Warn("reload", $"Failed reloading level '{sid}{map_name}':");
+                        Logger.Warn("reload", $"Failed reloading level '{sid}{mapName}':");
                         Logger.LogDetailed(ex, "reload");
 
                         // Open an error postcard
