@@ -4,10 +4,8 @@ using Microsoft.Xna.Framework;
 using Monocle;
 using MonoMod;
 
-namespace Celeste
-{
-    class patch_MusicFadeTrigger : MusicFadeTrigger
-    {
+namespace Celeste {
+    class patch_MusicFadeTrigger : MusicFadeTrigger {
 
         private PositionModes? positionMode;
 
@@ -27,8 +25,7 @@ namespace Celeste
         }
 
         [MonoModReplace]
-        public override void OnStay(Player player)
-        {
+        public override void OnStay(Player player) {
             float value;
             if (positionMode.HasValue)
                 value = Calc.ClampedMap(GetPositionLerp(player, positionMode.Value), 0f, 1f, FadeA, FadeB);
