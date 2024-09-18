@@ -118,9 +118,6 @@ namespace Celeste.Mod {
 
         internal static bool _ContentLoaded;
 
-        [Obsolete("Use the ComputeHash methods instead. They will reach stable on Sep 7, and this field will be removed in the following stable on Oct 5.")]
-        public readonly static HashAlgorithm ChecksumHasher = XXHash64.Create();
-
         public static byte[] ComputeHash(byte[] buffer) {
             using (HashAlgorithm checksumHasher = XXHash64.Create()) {
                 return checksumHasher.ComputeHash(buffer);
