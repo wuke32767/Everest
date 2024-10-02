@@ -179,6 +179,20 @@ namespace Celeste {
             Everest.Events.Level.Pause(this, startIndex, minimal, quickReset);
         }
 
+        /// <summary>
+        /// Forcefully close the pause menu; resume from paused.
+        /// </summary>
+        public void Unpause() {
+            if (Paused) {
+                PauseMainMenuOpen = false;
+                if (Entities.FindFirst<TextMenu>() is patch_TextMenu menu)
+                    menu.CloseAndRun(Everest.SaveSettings(), null);
+                Paused = false;
+                Audio.Play("event:/ui/game/unpause");
+                unpauseTimer = 0.15f;
+            }
+        }
+
         public extern void orig_TransitionTo(LevelData next, Vector2 direction);
         public new void TransitionTo(LevelData next, Vector2 direction) {
             orig_TransitionTo(next, direction);
