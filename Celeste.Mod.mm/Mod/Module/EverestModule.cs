@@ -694,7 +694,8 @@ namespace Celeste.Mod {
                 Type propType = prop.PropertyType;
                 object value = prop.GetValue(settingsObject);
 
-                bool disable = propType == typeof(string) || prop.GetCustomAttribute<SettingInGameDisableAttribute>()?.InGame == inGame;
+                bool forceDisableInGame = false;
+                bool disable = prop.GetCustomAttribute<SettingInGameDisableAttribute>()?.InGame == inGame;
 
                 // Create the matching item based off of the type and attributes.
                 if (propType == typeof(bool))
@@ -719,6 +720,7 @@ namespace Celeste.Mod {
                 else if ((propType == typeof(int) || propType == typeof(float)) &&
                     (attribNumber = prop.GetCustomAttribute<SettingNumberInputAttribute>()) != null)
                 {
+                    forceDisableInGame = true;
                     float currentValue;
                     Action<float> valueSetter;
                     if (propType == typeof(int)) {
@@ -761,6 +763,7 @@ namespace Celeste.Mod {
                 }
                 else if (propType == typeof(string))
                 {
+                    forceDisableInGame = true;
                     int maxValueLength = prop.GetCustomAttribute<SettingMaxLengthAttribute>()?.Max ?? 12;
                     int minValueLength = prop.GetCustomAttribute<SettingMinLengthAttribute>()?.Min ?? 1;
 
@@ -778,7 +781,7 @@ namespace Celeste.Mod {
                 }
 
                 if (item is not null)
-                    item.Disabled = disable;
+                    item.Disabled = disable || inGame && forceDisableInGame;
 
                 return item;
             }
