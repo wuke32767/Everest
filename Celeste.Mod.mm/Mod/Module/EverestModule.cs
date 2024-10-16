@@ -761,13 +761,16 @@ namespace Celeste.Mod {
                         .Change(v => prop.SetValue(settingsObject, v))
                     ;
 
-                } else if (!inGame && propType == typeof(string)) {
+                } else if (propType == typeof(string)) {
                     int maxValueLength = prop.GetCustomAttribute<SettingMaxLengthAttribute>()?.Max ?? 12;
                     int minValueLength = prop.GetCustomAttribute<SettingMinLengthAttribute>()?.Min ?? 1;
 
-                    item =
-                        new TextMenu.Button(name + ": " + value)
-                        .Pressed(() => {
+                    item = new TextMenu.Button(name + ": " + value) {
+                        Disabled = inGame
+                    };
+
+                    if (!inGame)
+                        item.Pressed(() => {
                             Audio.Play(SFX.ui_main_savefile_rename_start);
                             menu.SceneAs<Overworld>().Goto<OuiModOptionString>().Init<OuiModOptions>(
                                 (string) value,
@@ -775,8 +778,7 @@ namespace Celeste.Mod {
                                 maxValueLength,
                                 minValueLength
                             );
-                        })
-                    ;
+                        });
                 }
                 return item;
             }
