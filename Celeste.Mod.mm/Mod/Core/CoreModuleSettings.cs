@@ -308,6 +308,26 @@ namespace Celeste.Mod.Core {
         [SettingIgnore]
         public int DebugRCPort { get; set; } = 32270;
 
+        public bool PhotosensitiveMode {
+            get => Settings.Instance.DisableFlashes;
+            set => Settings.Instance.DisableFlashes = value;
+        }
+        
+        [SettingIgnore]
+        public bool PhotosensitivityDistort { get; set; } = false;
+
+        [SettingIgnore]
+        public bool PhotosensitivityGlitch { get; set; } = false;
+
+        [SettingIgnore]
+        public bool PhotosensitivityLightning { get; set; } = false;
+
+        [SettingIgnore]
+        public bool PhotosensitivityScreenFlash { get; set; } = false;
+
+        [SettingIgnore]
+        public bool PhotosensitivityTextHighlight { get; set; } = false;
+
         [SettingIgnore]
         public int? QuickRestart { get; set; }
 
@@ -609,6 +629,53 @@ namespace Celeste.Mod.Core {
             showSide.Disabled = !DiscordShowMap;
             showRoom.Disabled = !DiscordShowMap;
 
+            menu.Add(submenu);
+        }
+
+        public void CreatePhotosensitiveModeEntry(TextMenu menu, bool inGame) {
+
+            TextMenu.Item distort = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSDISTORT"), PhotosensitivityDistort)
+                .Change(value => {
+                    PhotosensitivityDistort = value;
+                });
+
+            TextMenu.Item glitch = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSGLITCH"), PhotosensitivityGlitch)
+                .Change(value => {
+                    PhotosensitivityGlitch = value;
+                });
+
+            TextMenu.Item lightning = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSLIGHTNING"), PhotosensitivityLightning)
+                .Change(value => {
+                    PhotosensitivityLightning = value;
+                });
+
+            TextMenu.Item screenFlash = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSSCREENFLASH"), PhotosensitivityScreenFlash)
+                .Change(value => {
+                    PhotosensitivityScreenFlash = value;
+                });
+
+            TextMenu.Item textHighlight = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT"), PhotosensitivityTextHighlight)
+                .Change(value => {
+                    PhotosensitivityTextHighlight = value;
+                });
+
+            TextMenuExt.SubMenu submenu = new TextMenuExt.SubMenu(Dialog.Clean("MODOPTIONS_COREMODULE_PSOPTIONS"), false)
+                .Add(distort)
+                .Add(glitch)
+                .Add(lightning)
+                .Add(screenFlash)
+                .Add(textHighlight);
+
+            TextMenu.Item masterSwitch = new TextMenu.OnOff(Dialog.Clean("OPTIONS_DISABLE_FLASH"), PhotosensitiveMode)
+                .Change(value => {
+                    PhotosensitiveMode = value;
+                    submenu.Disabled = !value;
+                });
+                /* .Added({
+                    submenu.Disabled = !Settings.Instance.DisableFlashes;
+                }); */
+
+            menu.Add(masterSwitch);
             menu.Add(submenu);
         }
 
