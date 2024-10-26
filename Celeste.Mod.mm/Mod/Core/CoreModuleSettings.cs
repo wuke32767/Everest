@@ -314,19 +314,49 @@ namespace Celeste.Mod.Core {
         }
         
         [SettingIgnore]
-        public bool PhotosensitivityDistort { get; set; } = false;
+        public bool PhotosensitivityDistortOverride { get; set; } = false;
 
         [SettingIgnore]
-        public bool PhotosensitivityGlitch { get; set; } = false;
+        [YamlIgnore]
+        public bool AllowDistort {
+            get => !Settings.Instance.DisableFlashes || PhotosensitivityDistortOverride; 
+        }
 
         [SettingIgnore]
-        public bool PhotosensitivityLightning { get; set; } = false;
+        public bool PhotosensitivityGlitchOverride { get; set; } = false;
 
         [SettingIgnore]
-        public bool PhotosensitivityScreenFlash { get; set; } = false;
+        [YamlIgnore]
+        public bool AllowGlitch {
+            get => !Settings.Instance.DisableFlashes || PhotosensitivityGlitchOverride;
+        }
 
         [SettingIgnore]
-        public bool PhotosensitivityTextHighlight { get; set; } = false;
+        public bool PhotosensitivityLightningOverride { get; set; } = false;
+
+        [SettingIgnore]
+        [YamlIgnore]
+        public bool AllowLightning {
+            get => !Settings.Instance.DisableFlashes || PhotosensitivityLightningOverride;
+        }
+
+        [SettingIgnore]
+        public bool PhotosensitivityScreenFlashOverride { get; set; } = false;
+
+        [SettingIgnore]
+        [YamlIgnore]
+        public bool AllowScreenFlash {
+            get => !Settings.Instance.DisableFlashes || PhotosensitivityScreenFlashOverride;
+        }
+
+        [SettingIgnore]
+        public bool PhotosensitivityTextHighlightOverride { get; set; } = false;
+
+        [SettingIgnore]
+        [YamlIgnore]
+        public bool AllowTextHighlight {
+            get => !Settings.Instance.DisableFlashes || PhotosensitivityTextHighlightOverride;
+        }
 
         [SettingIgnore]
         public int? QuickRestart { get; set; }
@@ -634,29 +664,29 @@ namespace Celeste.Mod.Core {
 
         public void CreatePhotosensitiveModeEntry(TextMenu menu, bool inGame) {
 
-            TextMenu.Item distort = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSDISTORT"), PhotosensitivityDistort)
+            TextMenu.Item distort = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSDISTORT"), PhotosensitivityDistortOverride)
                 .Change(value => {
-                    PhotosensitivityDistort = value;
+                    PhotosensitivityDistortOverride = value;
                 });
 
-            TextMenu.Item glitch = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSGLITCH"), PhotosensitivityGlitch)
+            TextMenu.Item glitch = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSGLITCH"), PhotosensitivityGlitchOverride)
                 .Change(value => {
-                    PhotosensitivityGlitch = value;
+                    PhotosensitivityGlitchOverride = value;
                 });
 
-            TextMenu.Item lightning = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSLIGHTNING"), PhotosensitivityLightning)
+            TextMenu.Item lightning = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSLIGHTNING"), PhotosensitivityLightningOverride)
                 .Change(value => {
-                    PhotosensitivityLightning = value;
+                    PhotosensitivityLightningOverride = value;
                 });
 
-            TextMenu.Item screenFlash = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSSCREENFLASH"), PhotosensitivityScreenFlash)
+            TextMenu.Item screenFlash = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSSCREENFLASH"), PhotosensitivityScreenFlashOverride)
                 .Change(value => {
-                    PhotosensitivityScreenFlash = value;
+                    PhotosensitivityScreenFlashOverride = value;
                 });
 
-            TextMenu.Item textHighlight = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT"), PhotosensitivityTextHighlight)
+            TextMenu.Item textHighlight = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT"), PhotosensitivityTextHighlightOverride)
                 .Change(value => {
-                    PhotosensitivityTextHighlight = value;
+                    PhotosensitivityTextHighlightOverride = value;
                 });
 
             TextMenuExt.SubMenu submenu = new TextMenuExt.SubMenu(Dialog.Clean("MODOPTIONS_COREMODULE_PSOPTIONS"), false)
