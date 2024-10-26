@@ -701,9 +701,6 @@ namespace Celeste.Mod.Core {
                     PhotosensitiveMode = value;
                     submenu.Disabled = !value;
                 });
-                /* .Added({
-                    submenu.Disabled = !Settings.Instance.DisableFlashes;
-                }); */
 
             menu.Add(masterSwitch);
             menu.Add(submenu);
