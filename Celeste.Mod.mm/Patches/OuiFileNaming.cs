@@ -133,7 +133,7 @@ namespace Celeste {
         }
 
         [MonoModReplace]
-        private new Color GetTextColor(bool selected) {
+        private Color GetTextColor(bool selected) {
             if (selected) {
                 if (!CoreModule.Settings.AllowTextHighlight) {
                     return selectColorA;
