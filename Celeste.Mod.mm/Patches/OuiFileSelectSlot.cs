@@ -153,6 +153,17 @@ namespace Celeste {
             orig_Show();
         }
 
+        [MonoModReplace]
+        public new Color SelectionColor(bool selected) {
+            if (selected) {
+                if (CoreModule.Settings.AllowTextHighlight && !base.Scene.BetweenInterval(0.1f)) {
+                    return TextMenu.HighlightColorB;
+                }
+                return TextMenu.HighlightColorA;
+            }
+            return Color.White;
+        }
+
         public extern void orig_CreateButtons();
         public new void CreateButtons() {
             orig_CreateButtons();

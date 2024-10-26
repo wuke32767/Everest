@@ -9,6 +9,7 @@ using MonoMod;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace Celeste {
     class patch_OuiMainMenu : OuiMainMenu {
@@ -17,6 +18,16 @@ namespace Celeste {
         private List<MenuButton> buttons;
         public List<MenuButton> Buttons => buttons;
         private MainMenuClimb climbButton;
+
+        [MonoModReplace]
+        public new Color SelectionColor {
+            get {
+                if (CoreModule.Settings.AllowTextHighlight && !base.Scene.BetweenInterval(0.1f)) {
+                    return TextMenu.HighlightColorB;
+                }
+                return TextMenu.HighlightColorA;
+            }
+        }
 
         public extern void orig_CreateButtons();
         public new void CreateButtons() {
