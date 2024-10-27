@@ -1,5 +1,4 @@
 ﻿#pragma warning disable CS0626 // Method, operator, or accessor is marked external and has no attributes on it
-// pragma balls lmao
 
 using FMOD.Studio;
 using Celeste.Mod.Core;
