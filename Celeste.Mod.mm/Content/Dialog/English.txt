@@ -134,7 +134,7 @@
 	
 	MODOPTIONS_COREMODULE_PSOPTIONS=						Everest Photosensitivity Options
 	MODOPTIONS_COREMODULE_PSOPTIONS_DESC=					Allows toggling parts of Photosensitive Mode. Added by Everest.
-	MODOPTIONS_COREMODULE_PSDISTORT=						Distortion Effects
+	MODOPTIONS_COREMODULE_PSDISTORT=						Anxiety & Distortion Effects
 	MODOPTIONS_COREMODULE_PSDISTORT_DESC=					Controls the distortion effect created by getting near a Seeker.
 	MODOPTIONS_COREMODULE_PSGLITCH=							Glitch Effects
 	MODOPTIONS_COREMODULE_PSGLITCH_DESC=					Controls the glitch effect from the transition to Event Horizon in Farewell.
