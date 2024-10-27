@@ -141,9 +141,9 @@
 	MODOPTIONS_COREMODULE_PSLIGHTNING=						Internal Lightning Flashes
 	MODOPTIONS_COREMODULE_PSLIGHTNING_DESC=					Controls whether the electricity from Farewell will flash on the inside.
 	MODOPTIONS_COREMODULE_PSSCREENFLASH=					Screen Flashes
-	MODOPTIONS_COREMODULE_PSSCREENFLASH_DESC=				Controls whether the entire screen can flash white for effect, such as when activating a core switch.
+	MODOPTIONS_COREMODULE_PSSCREENFLASH_DESC=				Controls whether the screen can flash white, like on activating a core switch.
 	MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT=					Text Highlighting
-	MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT_DESC=				Controls whether text will flash a different color on select. May not work in all menus.
+	MODOPTIONS_COREMODULE_PSTEXTHIGHLIGHT_DESC=				Controls whether text will flash a different color on select.
 	
 
 	MODOPTIONS_COREMODULE_MIRRORPREFERENCES=				Use Mirror by Default
