@@ -318,45 +318,35 @@ namespace Celeste.Mod.Core {
 
         [SettingIgnore]
         [YamlIgnore]
-        public bool AllowDistort {
-            get => !Settings.Instance.DisableFlashes || PhotosensitivityDistortOverride; 
-        }
+        public bool AllowDistort => !Settings.Instance.DisableFlashes || PhotosensitivityDistortOverride; 
 
         [SettingIgnore]
         public bool PhotosensitivityGlitchOverride { get; set; } = false;
 
         [SettingIgnore]
         [YamlIgnore]
-        public bool AllowGlitch {
-            get => !Settings.Instance.DisableFlashes || PhotosensitivityGlitchOverride;
-        }
+        public bool AllowGlitch => !Settings.Instance.DisableFlashes || PhotosensitivityGlitchOverride;
 
         [SettingIgnore]
         public bool PhotosensitivityLightningOverride { get; set; } = false;
 
         [SettingIgnore]
         [YamlIgnore]
-        public bool AllowLightning {
-            get => !Settings.Instance.DisableFlashes || PhotosensitivityLightningOverride;
-        }
+        public bool AllowLightning => !Settings.Instance.DisableFlashes || PhotosensitivityLightningOverride;
 
         [SettingIgnore]
         public bool PhotosensitivityScreenFlashOverride { get; set; } = false;
 
         [SettingIgnore]
         [YamlIgnore]
-        public bool AllowScreenFlash {
-            get => !Settings.Instance.DisableFlashes || PhotosensitivityScreenFlashOverride;
-        }
+        public bool AllowScreenFlash => !Settings.Instance.DisableFlashes || PhotosensitivityScreenFlashOverride; 
 
         [SettingIgnore]
         public bool PhotosensitivityTextHighlightOverride { get; set; } = false;
 
         [SettingIgnore]
         [YamlIgnore]
-        public bool AllowTextHighlight {
-            get => !Settings.Instance.DisableFlashes || PhotosensitivityTextHighlightOverride;
-        }
+        public bool AllowTextHighlight => !Settings.Instance.DisableFlashes || PhotosensitivityTextHighlightOverride;
 
         [SettingIgnore]
         public int? QuickRestart { get; set; }

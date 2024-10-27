@@ -14,10 +14,8 @@ using MonoMod.Utils;
 namespace Celeste {
     class patch_LightningRenderer : LightningRenderer {
 
-        [MonoModPublic]
         private class patch_Bolt {
 
-            [MonoModPublic]
             [MonoModIgnore]
             [PatchLightningRendererBoltRun]
             private extern IEnumerator Run();
