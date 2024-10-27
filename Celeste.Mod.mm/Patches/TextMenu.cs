@@ -604,10 +604,18 @@ namespace MonoMod {
 
             ILCursor cursor = new ILCursor(context);
             cursor.GotoNext(MoveType.Before, instr => instr.MatchLdsfld("Celeste.Settings", "Instance"));
-            // Remember to clear instructions off the stack
-            cursor.RemoveRange(2);
-            cursor.EmitCall(m_CoreModule_get_Settings);
-            cursor.EmitCall(m_get_AllowTextHighlight);
+            
+            // Put the settings module on the stack
+            cursor.Next.OpCode = OpCodes.Call;
+            cursor.Next.Operand = m_CoreModule_get_Settings;
+
+            // Get the AllowTextHighlight value 
+            cursor.Index++;
+            cursor.Next.OpCode = OpCodes.Call;
+            cursor.Next.Operand = m_get_AllowTextHighlight;
+
+            // Break if true, instead of false
+            cursor.Index++;
             cursor.Next.OpCode = OpCodes.Brtrue;
         }
 
