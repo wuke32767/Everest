@@ -132,7 +132,8 @@
 	MODOPTIONS_COREMODULE_DISCORDSHOWDEATHS=				Show Death Count
 	MODOPTIONS_COREMODULE_DISCORDFAILED=					Could not connect to Discord. Turn off and back on to retry.
 	
-	MODOPTIONS_COREMODULE_PSOPTIONS=						Advanced Photosensitivity Options
+	MODOPTIONS_COREMODULE_PSOPTIONS=						Everest Photosensitivity Options
+	MODOPTIONS_COREMODULE_PSOPTIONS_DESC=					Allows toggling parts of Photosensitive Mode. Added by Everest.
 	MODOPTIONS_COREMODULE_PSDISTORT=						Distortion Effects
 	MODOPTIONS_COREMODULE_PSDISTORT_DESC=					Controls the distortion effect created by getting near a Seeker.
 	MODOPTIONS_COREMODULE_PSGLITCH=							Glitch Effects

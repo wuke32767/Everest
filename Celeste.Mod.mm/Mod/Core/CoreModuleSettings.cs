@@ -662,6 +662,10 @@ namespace Celeste.Mod.Core {
             menu.Add(submenu);
         }
 
+
+        // If we want to put the advanced photosensitivity settings in Mod Options, just uncomment this.
+        // Left in (albeit commented) in case the implementation changes.
+        /*
         public void CreatePhotosensitiveModeEntry(TextMenu menu, bool inGame) {
 
             TextMenu.Item distort = new TextMenu.OnOff(Dialog.Clean("MODOPTIONS_COREMODULE_PSDISTORT"), PhotosensitivityDistortOverride)
@@ -704,7 +708,7 @@ namespace Celeste.Mod.Core {
 
             menu.Add(masterSwitch);
             menu.Add(submenu);
-        }
+        } */
 
         public void CreateMirrorPreferencesEntry(TextMenu menu, bool inGame) {
             if (inGame) return;
