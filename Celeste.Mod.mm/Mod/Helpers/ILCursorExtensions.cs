@@ -7,6 +7,9 @@ namespace Celeste.Mod.Helpers {
     public static class ILCursorExtensions {
         public const int DefaultMaxInstructionSpread = 0x10;
 
+        private const string NextBestFitLogID = $"{nameof(ILCursorExtensions)}/NextBestFit";
+        private const string PrevBestFitLogID = $"{nameof(ILCursorExtensions)}/PrevBestFit";
+
         /// <summary>
         ///   Go to the next best fit match of a given IL sequence, allowing up to <see cref="DefaultMaxInstructionSpread"/>
         ///   instructions of tolerance if the instructions are not sequential.<br/>
@@ -63,7 +66,8 @@ namespace Celeste.Mod.Helpers {
         ///
         ///   If there are two matches which have the same spread, pick the closest one.
         /// </remarks>
-        public static void GotoNextBestFit(this ILCursor cursor, MoveType moveType, int maxInstructionSpread, params Func<Instruction, bool>[] predicates) {
+        public static void GotoNextBestFit(this ILCursor cursor, MoveType moveType, int maxInstructionSpread, params Func<Instruction, bool>[] predicates)
+        {
             if (!cursor.TryGotoNextBestFit(moveType, maxInstructionSpread, predicates))
                 throw new KeyNotFoundException($"Could not find a matching set of instructions with instruction spread of {maxInstructionSpread}.");
         }
@@ -132,6 +136,9 @@ namespace Celeste.Mod.Helpers {
             if (predicates.Length == 1)
                 return cursor.TryGotoNext(moveType, predicates[0]);
 
+            Logger.Debug(NextBestFitLogID, $"Looking for next best fit in {cursor.Context.Method.FullName}.");
+            Logger.Debug(NextBestFitLogID, $"{nameof(ILCursor)}#{cursor.GetHashCode():X8} has initial index 0x{cursor.Index:X4}.");
+
             List<(int start, int end)> matchCandidates = new List<(int start, int end)>();
 
             int initialPosition = cursor.Index;
@@ -149,17 +156,36 @@ namespace Celeste.Mod.Helpers {
                     Func<Instruction, bool> matcher = predicates[i];
                     int beforeMoveIndex = cursor.Index;
 
-                    // also make sure we haven't gone further than maxInstructionSpread
-                    if (cursor.TryGotoNext(MoveType.After, matcher) && cursor.Index - beforeMoveIndex <= maxInstructionSpread)
-                        continue;
+                    if (!cursor.TryGotoNext(MoveType.After, matcher))
+                    {
+                        Logger.Verbose(NextBestFitLogID,
+                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
 
-                    matchFound = false;
-                    break;
+                        matchFound = false;
+                        break;
+                    }
+
+                    // also make sure we haven't gone further than maxInstructionSpread
+                    int instructionSpread = cursor.Index - beforeMoveIndex;
+                    if (instructionSpread > maxInstructionSpread)
+                    {
+                        Logger.Debug(NextBestFitLogID,
+                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and ${i} has been exceeded " +
+                            $"({instructionSpread} > {maxInstructionSpread}). Continuing search.");
+
+                        matchFound = false;
+                        break;
+                    }
                 }
 
                 if (matchFound)
+                {
+                    Logger.Verbose(NextBestFitLogID,
+                        $"Found match between indices 0x{savedCursorPosition:X4} and 0x{cursor.Index:X4}. Continuing search.");
+
                     // remember the start and end indices of the match
                     matchCandidates.Add((savedCursorPosition, cursor.Index));
+                }
 
                 // we go again
                 // skip the first instance, else we'll get stuck
@@ -170,8 +196,11 @@ namespace Celeste.Mod.Helpers {
             cursor.Index = initialPosition;
 
             if (matchCandidates.Count == 0)
+            {
                 // no match :c
+                Logger.Debug(NextBestFitLogID, $"Could not find next best fit for cursor {nameof(ILCursor)}#{cursor.GetHashCode():X8}.");
                 return false;
+            }
 
             // we found a match!
             // pick the one which has the least instruction spread
@@ -196,6 +225,9 @@ namespace Celeste.Mod.Helpers {
                         break;
                 }
             }
+
+            Logger.Debug(NextBestFitLogID,
+                $"Selecting next best fit between indices 0x{bestMatch.start:X4} and 0x{bestMatch.end:X4} for cursor {nameof(ILCursor)}#{cursor.GetHashCode():X8}.");
 
             cursor.Index = GetIndexFromMatch(moveType, bestMatch);
 
@@ -269,7 +301,8 @@ namespace Celeste.Mod.Helpers {
         ///   <b>may</b> have moved forwards instead of backwards, if the first predicate matches close to the cursor,
         ///   and the <paramref name="predicates"/> list is long enough.
         /// </remarks>
-        public static void GotoPrevBestFit(this ILCursor cursor, MoveType moveType, int maxInstructionSpread, params Func<Instruction, bool>[] predicates) {
+        public static void GotoPrevBestFit(this ILCursor cursor, MoveType moveType, int maxInstructionSpread, params Func<Instruction, bool>[] predicates)
+        {
             if (!cursor.TryGotoPrevBestFit(moveType, maxInstructionSpread, predicates))
                 throw new KeyNotFoundException($"Could not find a matching set of instructions with instruction spread of {maxInstructionSpread}.");
         }
@@ -346,6 +379,9 @@ namespace Celeste.Mod.Helpers {
             if (predicates.Length == 1)
                 return cursor.TryGotoNext(moveType, predicates[0]);
 
+            Logger.Debug(PrevBestFitLogID, $"Looking for previous best fit in {cursor.Context.Method.FullName}.");
+            Logger.Debug(PrevBestFitLogID, $"{nameof(ILCursor)}#{cursor.GetHashCode():X8} has initial index 0x{cursor.Index:X4}.");
+
             List<(int start, int end)> matchCandidates = new List<(int start, int end)>();
 
             int initialPosition = cursor.Index;
@@ -363,18 +399,38 @@ namespace Celeste.Mod.Helpers {
                     Func<Instruction, bool> matcher = predicates[i];
                     int beforeMoveIndex = cursor.Index;
 
+                    if (!cursor.TryGotoNext(MoveType.After, matcher))
+                    {
+                        Logger.Verbose(PrevBestFitLogID,
+                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
+
+                        matchFound = false;
+                        break;
+                    }
+
                     // also make sure we haven't gone further than maxInstructionSpread
                     // note that we could have gone past the initial cursor position!
-                    if (cursor.TryGotoNext(MoveType.After, matcher) && cursor.Index - beforeMoveIndex <= maxInstructionSpread)
-                        continue;
+                    int instructionSpread = cursor.Index - beforeMoveIndex;
+                    if (instructionSpread > maxInstructionSpread)
+                    {
+                        Logger.Debug(PrevBestFitLogID,
+                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and ${i} has been exceeded " +
+                            $"({instructionSpread} > {maxInstructionSpread}). Continuing search.");
 
-                    matchFound = false;
-                    break;
+                        matchFound = false;
+                        break;
+                    }
+
                 }
 
                 if (matchFound)
+                {
+                    Logger.Verbose(PrevBestFitLogID,
+                        $"Found match between indices 0x{savedCursorPosition:X4} and 0x{cursor.Index:X4}. Continuing search.");
+
                     // remember the start and end indices of the match
                     matchCandidates.Add((savedCursorPosition, cursor.Index));
+                }
 
                 // we go again
                 cursor.Index = savedCursorPosition;
@@ -384,8 +440,11 @@ namespace Celeste.Mod.Helpers {
             cursor.Index = initialPosition;
 
             if (matchCandidates.Count == 0)
+            {
                 // no match :c
+                Logger.Debug(PrevBestFitLogID, $"Could not find previous best fit for cursor {nameof(ILCursor)}#{cursor.GetHashCode():X8}.");
                 return false;
+            }
 
             // we found a match!
             // pick the one which has the least instruction spread
@@ -410,6 +469,9 @@ namespace Celeste.Mod.Helpers {
                         break;
                 }
             }
+
+            Logger.Debug(PrevBestFitLogID,
+                $"Selecting previous best fit between indices 0x{bestMatch.start:X4} and 0x{bestMatch.end:X4} for cursor {nameof(ILCursor)}#{cursor.GetHashCode():X8}.");
 
             cursor.Index = GetIndexFromMatch(moveType, bestMatch);
 
