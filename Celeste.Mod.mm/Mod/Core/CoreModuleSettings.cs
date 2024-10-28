@@ -4,6 +4,7 @@ using Monocle;
 using MonoMod;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Runtime.InteropServices;
 using YamlDotNet.Serialization;
@@ -314,36 +315,66 @@ namespace Celeste.Mod.Core {
         }
         
         [SettingIgnore]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        // This option is exclusively used internally; do not use it in mods. Use AllowDistort instead.
+        // It needs to be public for YamlDotNet to not have an aneurysm, but it really shouldn't be.
         public bool PhotosensitivityDistortOverride { get; set; } = false;
 
+        /// <summary>
+        /// Whether a distortion effect should be rendered, respecting Everest's photosensitivity setting overrides.
+        /// </summary>
         [SettingIgnore]
         [YamlIgnore]
         public bool AllowDistort => !Settings.Instance.DisableFlashes || PhotosensitivityDistortOverride; 
 
         [SettingIgnore]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        // This option is exclusively used internally; do not use it in mods. Use AllowGlitch instead.
+        // It needs to be public for YamlDotNet to not have an aneurysm, but it really shouldn't be.
         public bool PhotosensitivityGlitchOverride { get; set; } = false;
 
+        /// <summary>
+        /// Whether a glitch effect should be rendered, respecting Everest's photosensitivity setting overrides.
+        /// </summary>
         [SettingIgnore]
         [YamlIgnore]
         public bool AllowGlitch => !Settings.Instance.DisableFlashes || PhotosensitivityGlitchOverride;
 
         [SettingIgnore]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        // This option is exclusively used internally; do not use it in mods. Use AllowLightning instead.
+        // It needs to be public for YamlDotNet to not have an aneurysm, but it really shouldn't be.
         public bool PhotosensitivityLightningOverride { get; set; } = false;
 
+        /// <summary>
+        /// Whether lightning should have internal flashes, respecting Everest's photosensitivity setting overrides.
+        /// </summary>
         [SettingIgnore]
         [YamlIgnore]
         public bool AllowLightning => !Settings.Instance.DisableFlashes || PhotosensitivityLightningOverride;
 
         [SettingIgnore]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        // This option is exclusively used internally; do not use it in mods. Use AllowScreenFlash instead.
+        // It needs to be public for YamlDotNet to not have an aneurysm, but it really shouldn't be.
         public bool PhotosensitivityScreenFlashOverride { get; set; } = false;
 
+        /// <summary>
+        /// Whether to render a screenwide flash, respecting Everest's photosensitivity setting overrides.
+        /// </summary>
         [SettingIgnore]
         [YamlIgnore]
         public bool AllowScreenFlash => !Settings.Instance.DisableFlashes || PhotosensitivityScreenFlashOverride; 
 
         [SettingIgnore]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        // This option is exclusively used internally; do not use it in mods. Use AllowTextHighlight instead.
+        // It needs to be public for YamlDotNet to not have an aneurysm, but it really shouldn't be.
         public bool PhotosensitivityTextHighlightOverride { get; set; } = false;
 
+        /// <summary>
+        /// Whether text in menus should flash when selected, respecting Everest's photosensitivity setting overrides.
+        /// </summary>
         [SettingIgnore]
         [YamlIgnore]
         public bool AllowTextHighlight => !Settings.Instance.DisableFlashes || PhotosensitivityTextHighlightOverride;
