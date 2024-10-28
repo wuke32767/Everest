@@ -159,7 +159,7 @@ namespace Celeste.Mod.Helpers {
                     if (!cursor.TryGotoNext(MoveType.After, matcher))
                     {
                         Logger.Verbose(NextBestFitLogID,
-                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
+                            $"Matched predicate #0 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
 
                         matchFound = false;
                         break;
@@ -170,7 +170,7 @@ namespace Celeste.Mod.Helpers {
                     if (instructionSpread > maxInstructionSpread)
                     {
                         Logger.Debug(NextBestFitLogID,
-                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and ${i} has been exceeded " +
+                            $"Matched predicate #0 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and #{i} has been exceeded " +
                             $"({instructionSpread} > {maxInstructionSpread}). Continuing search.");
 
                         matchFound = false;
@@ -402,7 +402,7 @@ namespace Celeste.Mod.Helpers {
                     if (!cursor.TryGotoNext(MoveType.After, matcher))
                     {
                         Logger.Verbose(PrevBestFitLogID,
-                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
+                            $"Matched predicate #0 at index 0x{savedCursorPosition:X4}, but failed to match predicate #{i}. Continuing search.");
 
                         matchFound = false;
                         break;
@@ -414,7 +414,7 @@ namespace Celeste.Mod.Helpers {
                     if (instructionSpread > maxInstructionSpread)
                     {
                         Logger.Debug(PrevBestFitLogID,
-                            $"Matched predicate #1 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and ${i} has been exceeded " +
+                            $"Matched predicate #0 at index 0x{savedCursorPosition:X4}, but the instruction spread between predicates #{i-1} and #{i} has been exceeded " +
                             $"({instructionSpread} > {maxInstructionSpread}). Continuing search.");
 
                         matchFound = false;
