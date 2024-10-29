@@ -15,7 +15,7 @@ namespace Celeste {
             set 
             {
                 anxiety = value;
-                GFX.FxDistort.Parameters["anxiety"].SetValue((CoreModule.Settings.AllowDistort) ? anxiety : 0f);
+                GFX.FxDistort.Parameters["anxiety"].SetValue(CoreModule.Settings.AllowDistort ? anxiety : 0f);
             } 
         }
     }
