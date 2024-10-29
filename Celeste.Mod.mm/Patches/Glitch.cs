@@ -40,7 +40,7 @@ namespace MonoMod {
             cursor.GotoNext(MoveType.Before, instr => instr.MatchLdsfld("Celeste.Settings", "Instance"));
             cursor.RemoveRange(2);
             cursor.EmitCall(m_CoreModule_get_Settings);
-            cursor.EmitCall(m_get_AllowGlitch);
+            cursor.EmitCallvirt(m_get_AllowGlitch);
             cursor.Next.OpCode = OpCodes.Brfalse;
         }
     }

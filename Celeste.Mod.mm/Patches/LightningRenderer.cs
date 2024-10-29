@@ -64,7 +64,7 @@ namespace MonoMod {
 
                 // Get the AllowLightning value 
                 cursor.Index++;
-                cursor.Next.OpCode = OpCodes.Call;
+                cursor.Next.OpCode = OpCodes.Callvirt;
                 cursor.Next.Operand = m_get_AllowLightning;
 
                 // Break if false, instead of if true

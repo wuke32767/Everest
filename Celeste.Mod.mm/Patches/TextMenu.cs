@@ -611,7 +611,7 @@ namespace MonoMod {
 
             // Get the AllowTextHighlight value 
             cursor.Index++;
-            cursor.Next.OpCode = OpCodes.Call;
+            cursor.Next.OpCode = OpCodes.Callvirt;
             cursor.Next.Operand = m_get_AllowTextHighlight;
 
             // Break if true, instead of false

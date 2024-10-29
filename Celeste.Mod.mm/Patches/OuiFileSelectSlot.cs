@@ -366,7 +366,7 @@ namespace MonoMod {
             cursor.GotoNext(MoveType.Before, instr => instr.MatchLdsfld("Celeste.Settings", "Instance"));
             cursor.RemoveRange(2);
             cursor.EmitCall(m_CoreModule_get_Settings);
-            cursor.EmitCall(m_get_AllowScreenFlash);
+            cursor.EmitCallvirt(m_get_AllowScreenFlash);
             cursor.Next.OpCode = OpCodes.Brfalse;
         }
 
