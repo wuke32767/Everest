@@ -503,6 +503,7 @@ namespace Celeste.Mod {
                 if (!string.IsNullOrEmpty(meta.DLL)) {
                     if (meta.AssemblyContext.LoadAssemblyFromModPath(meta.DLL) is not Assembly asm) {
                         // Don't register a module - this will cause dependencies to not load
+                        Logger.Error("loader", $"Could not load DLL {meta.DLL} for mod {meta.Name}");
                         ModsWithAssemblyLoadFailures.Add(meta);
                         return false;
                     }
