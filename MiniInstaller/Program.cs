@@ -37,7 +37,7 @@ namespace MiniInstaller {
         public static string PathGame;
         public static string PathOSXExecDir;
         public static string PathCelesteExe;
-        public static string PathEverestExe, PathEverestDLL;
+        public static string PathEverestDLL;
         public static string PathEverestLib;
         public static string PathOrig;
         public static string PathLog;
@@ -146,20 +146,20 @@ namespace MiniInstaller {
                 if (AsmMonoMod == null || AsmNETCoreifier == null)
                     LoadModders();
 
-                ConvertToNETCore(Path.Combine(PathOrig, "Celeste.exe"), PathEverestExe);
+                ConvertToNETCore(Path.Combine(PathOrig, "Celeste.exe"), PathCelesteExe);
 
                 string everestModDLL = Path.ChangeExtension(PathCelesteExe, ".Mod.mm.dll");
                 string[] mods = new string[] { PathEverestLib, everestModDLL };
                 RunMonoMod(Path.Combine(PathEverestLib, "FNA.dll"), Path.Combine(PathGame, "FNA.dll"), dllPaths: mods); // We need to patch some methods in FNA as well
-                RunMonoMod(PathEverestExe, dllPaths: mods);
+                RunMonoMod(PathCelesteExe, dllPaths: mods);
 
                 string hookGenOutput = Path.Combine(PathGame, "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(PathCelesteExe), ".dll"));
-                RunHookGen(PathEverestExe, PathCelesteExe);
+                RunHookGen(PathCelesteExe, PathCelesteExe);
                 RunMonoMod(hookGenOutput, dllPaths: mods); // We need to fix some MonoMod crimes, so relink it against the legacy MonoMod layer
 
-                MoveExecutable(PathEverestExe, PathEverestDLL);
+                MoveExecutable(PathCelesteExe, PathEverestDLL);
                 CreateRuntimeConfigFiles(PathEverestDLL, new string[] { everestModDLL, hookGenOutput });
-                SetupAppHosts(PathEverestExe, PathEverestDLL, PathEverestDLL);
+                SetupAppHosts(PathCelesteExe, PathEverestDLL, PathEverestDLL);
 
                 CombineXMLDoc(Path.ChangeExtension(PathCelesteExe, ".Mod.mm.xml"), Path.ChangeExtension(PathCelesteExe, ".xml"));
 
@@ -272,7 +272,7 @@ namespace MiniInstaller {
                     // And assembly references changing is also a rare occasion, so skip it as well
                     if (doAppHost) {
                         CreateRuntimeConfigFiles(PathEverestDLL, new string[] { everestModDLL, hookGenOutput });
-                        SetupAppHosts(PathEverestExe, PathEverestDLL, PathEverestDLL);
+                        SetupAppHosts(PathCelesteExe, PathEverestDLL, PathEverestDLL);
                     }
 
                     // Combining xml docs is slow, and most of the time not even required
@@ -320,9 +320,9 @@ namespace MiniInstaller {
 
             // Here lies a reminder that patching into Everest.exe only caused confusion and issues.
             // RIP Everest.exe 2019 - 2020
-            PathEverestExe = PathCelesteExe;
-            PathEverestDLL = Path.ChangeExtension(PathEverestExe, ".dll");
-            PathEverestLib = Path.Combine(Path.GetDirectoryName(PathEverestExe), "everest-lib");
+            // PathEverestExe = PathCelesteExe;
+            PathEverestDLL = Path.ChangeExtension(PathCelesteExe, ".dll");
+            PathEverestLib = Path.Combine(Path.GetDirectoryName(PathCelesteExe), "everest-lib");
 
             PathOrig = Path.Combine(PathGame, "orig");
             PathLog = Path.Combine(PathGame, "miniinstaller-log.txt");
@@ -354,7 +354,7 @@ namespace MiniInstaller {
             }
 
             if (
-                (File.Exists(PathEverestExe) && !CanReadWrite(PathEverestExe)) ||
+                (File.Exists(PathCelesteExe) && !CanReadWrite(PathCelesteExe)) ||
                 (File.Exists(PathEverestDLL) && !CanReadWrite(PathEverestDLL))
              ) {
                 LogErr("Celeste not read-writeable - waiting");
@@ -1056,9 +1056,9 @@ namespace MiniInstaller {
             // If the game was installed via Steam, it should restart in a Steam context on its own.
             if (Platform != InstallPlatform.Windows) {
                 // The Linux and macOS version apphosts don't end in ".exe"
-                game.StartInfo.FileName = Path.ChangeExtension(PathEverestExe, null);
+                game.StartInfo.FileName = Path.ChangeExtension(PathCelesteExe, null);
             } else {
-                game.StartInfo.FileName = PathEverestExe;
+                game.StartInfo.FileName = PathCelesteExe;
             }
             game.StartInfo.WorkingDirectory = PathGame;
             game.Start();
