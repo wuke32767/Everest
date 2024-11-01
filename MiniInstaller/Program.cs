@@ -60,27 +60,23 @@ namespace MiniInstaller {
         }
 
         public static int Main(string[] args) {
+            if (args.Length == 0) return Standard(args);
+            if (args[0] == "--fastmode") return FastMode(args);
+            return Standard(args);
+        }
+
+        public static bool Init() {
             if (Type.GetType("Mono.Runtime") != null) {
                 Console.WriteLine("MiniInstaller is unable to run under mono!");
-                return 1;
+                return false;
             }
 
             // Set working directory
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
             
-            // Handle creating backup symlinks after obtaining elevation
-            if (args.Length > 0 && args[0] == $"{nameof(CreateBackupSymlinksWithElevation)}_PostElevationRequest") {
-                PathGame = args[1];
-                PathOrig = args[2];
-                CreateBackupSymlinks();
-                return 0;
-            }
-
-            Console.WriteLine("Everest MiniInstaller");
-
             if (!SetupPaths()) {
                 // setting up paths failed (Celeste.exe was not found).
-                return 1;
+                return false;
             }
 
             // .NET hates it when strong-named dependencies get updated.
@@ -99,77 +95,204 @@ namespace MiniInstaller {
                 return null;
             };
 
+            return true;
+        }
+
+        public static DisposableTuple SetupLogger() {
             if (File.Exists(PathLog))
                 File.Delete(PathLog);
-            using (Stream fileStream = File.OpenWrite(PathLog))
-            using (StreamWriter fileWriter = new StreamWriter(fileStream, Console.OutputEncoding))
-            using (LogWriter logWriter = new LogWriter(Console.Out, Console.Error, fileWriter)) {
-                try {
-                    WaitForGameExit();
+            Stream fileStream = File.OpenWrite(PathLog);
+            StreamWriter fileWriter = new StreamWriter(fileStream, Console.OutputEncoding);
+            LogWriter logWriter = new LogWriter(Console.Out, Console.Error, fileWriter);
+            
+            return new DisposableTuple(logWriter, fileWriter, fileStream);
+        }
 
-                    DetermineInstallPlatform();
+        public static int Standard(string[] args) {
+            if (!Init()) return 1;
+            
+            // Handle creating backup symlinks after obtaining elevation
+            if (args.Length > 0 && args[0] == $"{nameof(CreateBackupSymlinksWithElevation)}_PostElevationRequest") {
+                PathGame = args[1];
+                PathOrig = args[2];
+                CreateBackupSymlinks();
+                return 0;
+            }
 
-                    Backup();
+            Console.WriteLine("Everest MiniInstaller");
 
-                    MoveFilesFromUpdate();
+            using DisposableTuple _ = SetupLogger();
+            try {
+                WaitForGameExit();
 
+                DetermineInstallPlatform();
+
+                Backup();
+
+                MoveFilesFromUpdate();
+
+                if (File.Exists(PathEverestDLL))
+                    File.Delete(PathEverestDLL);
+
+                if (Platform == InstallPlatform.MacOS && !File.Exists(Path.Combine(PathGame, "Celeste.png")))
+                    File.Move(Path.Combine(PathGame, "Celeste-icon.png"), Path.Combine(PathGame, "Celeste.png"));
+                else
+                    File.Delete(Path.Combine(PathGame, "Celeste-icon.png"));
+
+                DeleteSystemLibs();
+                SetupNativeLibs();
+                CopyControllerDB();
+
+                if (AsmMonoMod == null || AsmNETCoreifier == null)
+                    LoadModders();
+
+                ConvertToNETCore(Path.Combine(PathOrig, "Celeste.exe"), PathEverestExe);
+
+                string everestModDLL = Path.ChangeExtension(PathCelesteExe, ".Mod.mm.dll");
+                string[] mods = new string[] { PathEverestLib, everestModDLL };
+                RunMonoMod(Path.Combine(PathEverestLib, "FNA.dll"), Path.Combine(PathGame, "FNA.dll"), dllPaths: mods); // We need to patch some methods in FNA as well
+                RunMonoMod(PathEverestExe, dllPaths: mods);
+
+                string hookGenOutput = Path.Combine(PathGame, "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(PathCelesteExe), ".dll"));
+                RunHookGen(PathEverestExe, PathCelesteExe);
+                RunMonoMod(hookGenOutput, dllPaths: mods); // We need to fix some MonoMod crimes, so relink it against the legacy MonoMod layer
+
+                MoveExecutable(PathEverestExe, PathEverestDLL);
+                CreateRuntimeConfigFiles(PathEverestDLL, new string[] { everestModDLL, hookGenOutput });
+                SetupAppHosts(PathEverestExe, PathEverestDLL, PathEverestDLL);
+
+                CombineXMLDoc(Path.ChangeExtension(PathCelesteExe, ".Mod.mm.xml"), Path.ChangeExtension(PathCelesteExe, ".xml"));
+
+                // If we're updating, start the game. Otherwise, close the window.
+                if (PathUpdate != null) {
+                    StartGame();
+                }
+
+            } catch (Exception e) {
+                string msg = e.ToString();
+                LogLine("");
+                LogErr(msg);
+                LogErr("");
+                LogErr("Installing Everest failed.");
+                if (msg.Contains("--->"))
+                    LogErr("Please review the error after the '--->' to see if you can fix it on your end.");
+                LogErr("");
+                LogErr("If you need help, please create a new issue on GitHub @ https://github.com/EverestAPI/Everest");
+                LogErr("or join the #modding_help channel on Discord (invite in the repo).");
+                LogErr("Make sure to upload your log file.");
+                return 1;
+
+            } finally {
+                // Let's not pollute <insert installer name here>.
+                Environment.SetEnvironmentVariable("MONOMOD_DEPDIRS", "");
+                Environment.SetEnvironmentVariable("MONOMOD_MODS", "");
+                Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "");
+            }
+
+            return 0;
+        }
+        
+        /// <summary>
+        /// Fast mode serves as a way to speed up development environments,
+        /// allowing disabling most parts of the installation process to only focus on the ones
+        /// where changes are relevant.
+        ///
+        /// Its five flags are:
+        /// "maingame": Runs MonoMod.Patcher with the Celeste.exe from orig and moves it to the celeste.dll
+        /// "fna": Runs MonoMod.Patcher with FNA.dll
+        /// "hookgen": Runs MonoMod.HookGen with the present dll, then runs MonoMod.Patcher on it to relink the HEM
+        /// "apphost": Only if "maingame" is also present, forces the regeneration of an apphost and runtime config files
+        /// "xmldoc": Only if "xmldoc" is also present, combines xmldocs
+        /// </summary>
+        /// <param name="args"></param>
+        /// <returns></returns>
+        public static int FastMode(string[] args) {
+            bool doMainGame = false;
+            bool doFNA = false;
+            bool doHookGen = false;
+            bool doAppHost = false;
+            bool doXmlDoc = false;
+            if (args.Length == 1) {
+                doMainGame = true;
+                doFNA = true;
+                doHookGen = true;
+                doAppHost = true;
+                doXmlDoc = true;
+            } else {
+                doMainGame = args.Contains("maingame");
+                doFNA = args.Contains("fna");
+                doHookGen = args.Contains("hookgen");
+                doAppHost = args.Contains("apphost");
+                doXmlDoc = args.Contains("xmldoc");
+            }
+
+            try {
+                if (!Init()) return 1;
+                Console.WriteLine("Everest MiniInstaller - FastMode");
+
+                using DisposableTuple _ = SetupLogger();
+
+                DetermineInstallPlatform();
+
+                if (!Directory.Exists(PathOrig)) {
+                    LogErr("FastMode is unsupported from a fresh installation, run miniinstaller normally first.");
+                    return 1;
+                }
+
+                if (AsmMonoMod == null || AsmNETCoreifier == null)
+                    LoadModders();
+
+                string everestModDLL = Path.ChangeExtension(PathCelesteExe, ".Mod.mm.dll");
+                string[] mods = new string[] { PathEverestLib, everestModDLL };
+
+                if (doMainGame) {
                     if (File.Exists(PathEverestDLL))
                         File.Delete(PathEverestDLL);
-
-                    if (Platform == InstallPlatform.MacOS && !File.Exists(Path.Combine(PathGame, "Celeste.png")))
-                        File.Move(Path.Combine(PathGame, "Celeste-icon.png"), Path.Combine(PathGame, "Celeste.png"));
-                    else
-                        File.Delete(Path.Combine(PathGame, "Celeste-icon.png"));
-
-                    DeleteSystemLibs();
-                    SetupNativeLibs();
-                    CopyControllerDB();
-
-                    if (AsmMonoMod == null || AsmNETCoreifier == null)
-                        LoadModders();
-
-                    ConvertToNETCore(Path.Combine(PathOrig, "Celeste.exe"), PathEverestExe);
-
-                    string everestModDLL = Path.ChangeExtension(PathCelesteExe, ".Mod.mm.dll");
-                    string[] mods = new string[] { PathEverestLib, everestModDLL };
+                    // We really only need to coreify celeste
+                    ConvertToNETCoreSingle(Path.Combine(PathOrig, "Celeste.exe"), PathEverestDLL);
+                }
+                
+                if (doFNA) {
                     RunMonoMod(Path.Combine(PathEverestLib, "FNA.dll"), Path.Combine(PathGame, "FNA.dll"), dllPaths: mods); // We need to patch some methods in FNA as well
-                    RunMonoMod(PathEverestExe, dllPaths: mods);
+                }
 
-                    string hookGenOutput = Path.Combine(PathGame, "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(PathCelesteExe), ".dll"));
-                    RunHookGen(PathEverestExe, PathCelesteExe);
+                if (doMainGame) {
+                    RunMonoMod(PathEverestDLL, dllPaths: mods);
+                }
+
+                // This should never change no matter the current settings
+                string hookGenOutput = Path.Combine(PathGame, "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(PathCelesteExe), ".dll"));
+                if (doHookGen) {
+                    RunHookGen(PathEverestDLL, PathCelesteExe);
                     RunMonoMod(hookGenOutput, dllPaths: mods); // We need to fix some MonoMod crimes, so relink it against the legacy MonoMod layer
+                }
 
-                    MoveExecutable(PathEverestExe, PathEverestDLL);
-                    CreateRuntimeConfigFiles(PathEverestDLL, new string[] { everestModDLL, hookGenOutput });
-                    SetupAppHosts(PathEverestExe, PathEverestDLL, PathEverestDLL);
-
-                    CombineXMLDoc(Path.ChangeExtension(PathCelesteExe, ".Mod.mm.xml"), Path.ChangeExtension(PathCelesteExe, ".xml"));
-
-                    // If we're updating, start the game. Otherwise, close the window.
-                    if (PathUpdate != null) {
-                        StartGame();
+                if (doMainGame) {
+                    // There's usually no reason to do this more than once ever, so don't unless explicitly told
+                    // And assembly references changing is also a rare occasion, so skip it as well
+                    if (doAppHost) {
+                        CreateRuntimeConfigFiles(PathEverestDLL, new string[] { everestModDLL, hookGenOutput });
+                        SetupAppHosts(PathEverestExe, PathEverestDLL, PathEverestDLL);
                     }
 
-                } catch (Exception e) {
-                    string msg = e.ToString();
-                    LogLine("");
-                    LogErr(msg);
-                    LogErr("");
-                    LogErr("Installing Everest failed.");
-                    if (msg.Contains("--->"))
-                        LogErr("Please review the error after the '--->' to see if you can fix it on your end.");
-                    LogErr("");
-                    LogErr("If you need help, please create a new issue on GitHub @ https://github.com/EverestAPI/Everest");
-                    LogErr("or join the #modding_help channel on Discord (invite in the repo).");
-                    LogErr("Make sure to upload your log file.");
-                    return 1;
-
-                } finally {
-                    // Let's not pollute <insert installer name here>.
-                    Environment.SetEnvironmentVariable("MONOMOD_DEPDIRS", "");
-                    Environment.SetEnvironmentVariable("MONOMOD_MODS", "");
-                    Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "");
+                    // Combining xml docs is slow, and most of the time not even required
+                    if (doXmlDoc) {
+                        CombineXMLDoc(Path.ChangeExtension(PathCelesteExe, ".Mod.mm.xml"), Path.ChangeExtension(PathCelesteExe, ".xml"));
+                    }
                 }
+            } catch (Exception e) {
+                string msg = e.ToString();
+                LogLine("");
+                LogErr(msg);
+                LogErr("");
+                LogErr("Installing Everest with FastMode failed.");
+                LogErr($"Settings: ({nameof(doMainGame)}, {nameof(doFNA)}, {nameof(doHookGen)}, {nameof(doAppHost)}) -> ({doMainGame}, {doFNA}, {doHookGen}, {doAppHost})");
+                LogErr("Try rerunning fast mode with more settings enabled, otherwise do a full standard run.");
+                return 1;
+            } finally {
+                Environment.SetEnvironmentVariable("MONOMOD_DEPDIRS", "");
+                Environment.SetEnvironmentVariable("MONOMOD_MODS", "");
+                Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "");
             }
 
             return 0;
@@ -715,12 +838,12 @@ namespace MiniInstaller {
             }
         }
 
-        public static void RunHookGen(string asm, string target) {
+        public static void RunHookGen(string asm, string targetName) {
             LogLine($"Running MonoMod.RuntimeDetour.HookGen for {asm}");
             // We're lazy.
             Environment.SetEnvironmentVariable("MONOMOD_DEPDIRS", PathGame);
             Environment.SetEnvironmentVariable("MONOMOD_DEPENDENCY_MISSING_THROW", "0");
-            AsmHookGen.EntryPoint.Invoke(null, new object[] { new string[] { "--private", asm, Path.Combine(Path.GetDirectoryName(target), "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(target), "dll")) } });
+            AsmHookGen.EntryPoint.Invoke(null, new object[] { new string[] { "--private", asm, Path.Combine(Path.GetDirectoryName(targetName), "MMHOOK_" + Path.ChangeExtension(Path.GetFileName(targetName), "dll")) } });
         }
 
         public static void ConvertToNETCore(string asmFrom, string asmTo = null, HashSet<string> convertedAsms = null) {
@@ -745,8 +868,12 @@ namespace MiniInstaller {
                     ConvertToNETCore(dstDepPath, convertedAsms: convertedAsms);
             }
 
-            LogLine($"Converting {asmFrom} to .NET Core");
+            ConvertToNETCoreSingle(asmFrom, asmTo);
+        }
 
+        public static void ConvertToNETCoreSingle(string asmFrom, string asmTo) {
+            LogLine($"Converting {asmFrom} to .NET Core");
+            
             string asmTmp = Path.Combine(PathTmp, Path.GetFileName(asmTo));
             try {
                 AsmNETCoreifier.GetType("NETCoreifier.Coreifier")
@@ -1099,5 +1226,17 @@ namespace MiniInstaller {
         [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)]
         static extern int MessageBox(IntPtr hWnd, String text, String caption, uint type);
 
+        public class DisposableTuple : IDisposable {
+            private readonly IDisposable[] _iDisposables;
+            public DisposableTuple(params IDisposable[] disposables) {
+                _iDisposables = disposables;
+            }
+
+            public void Dispose() {
+                foreach (IDisposable iDisposable in _iDisposables) {
+                    iDisposable.Dispose();
+                }
+            }
+        }
     }
 }
