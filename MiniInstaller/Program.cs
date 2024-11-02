@@ -138,6 +138,7 @@ namespace MiniInstaller {
         /// </summary>
         public static int FastMode(string[] args) {
             bool doMainGame = false;
+            bool coreGameCacheRegen = false;
             bool doFNA = false;
             bool doHookGen = false;
             bool doAppHost = false;
@@ -150,6 +151,7 @@ namespace MiniInstaller {
                 doXmlDoc = true;
             } else {
                 doMainGame = args.Contains("maingame");
+                coreGameCacheRegen = args.Contains("coreifier-invalidate-cache");
                 doFNA = args.Contains("fna");
                 doHookGen = args.Contains("hookgen");
                 doAppHost = args.Contains("apphost");
@@ -174,19 +176,25 @@ namespace MiniInstaller {
                 string everestModDLL = Path.ChangeExtension(Globals.PathCelesteExe, ".Mod.mm.dll");
                 string[] mods = new string[] { Globals.PathEverestLib, everestModDLL };
 
-                if (doMainGame) {
-                    if (File.Exists(Globals.PathEverestDLL))
-                        File.Delete(Globals.PathEverestDLL);
-                    // We really only need to coreify celeste
-                    DepCalls.ConvertToNETCoreSingle(Path.Combine(Globals.PathOrig, "Celeste.exe"), Globals.PathEverestDLL);
-                }
+                string coreGameCacheFile = Path.ChangeExtension(Globals.PathCelesteExe, ".CoreGameCache.dll");
                 
+                if (doMainGame && !File.Exists(coreGameCacheFile))
+                    coreGameCacheRegen = true;
+                
+                if (coreGameCacheRegen && File.Exists(coreGameCacheFile))
+                    File.Delete(coreGameCacheFile);
+
+                if (coreGameCacheRegen) {
+                    // We really only need to coreify celeste
+                    DepCalls.ConvertToNETCoreSingle(Path.Combine(Globals.PathOrig, "Celeste.exe"), coreGameCacheFile);
+                }
+
                 if (doFNA) {
                     DepCalls.RunMonoMod(Path.Combine(Globals.PathEverestLib, "FNA.dll"), Path.Combine(Globals.PathGame, "FNA.dll"), dllPaths: mods); // We need to patch some methods in FNA as well
                 }
 
                 if (doMainGame) {
-                    DepCalls.RunMonoMod(Globals.PathEverestDLL, dllPaths: mods);
+                    DepCalls.RunMonoMod(coreGameCacheFile, Globals.PathEverestDLL, dllPaths: mods);
                 }
 
                 // This should never change no matter the current settings
