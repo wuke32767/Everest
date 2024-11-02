@@ -42,6 +42,8 @@ For information about mod development, check out the [Everest Wiki](https://gith
     - macOS: `Celeste.app/Contents/Resources`
 - Run `./MiniInstaller-linux` or `./MiniInstaller-osx`
 
+For an automated building process check the build scripts, documentation [here](./buildscripts/building-everest.md).
+
 ## Contributing
 Contributions of any kind are welcome, and a guide on how to contribute effectively to the Everest project is available [here](./CONTRIBUTING.md).
 Make sure to join the discussion in the [Celeste Discord](https://discord.gg/6qjaePQ), and feel free to ask any questions you have there as well.
