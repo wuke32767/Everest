@@ -16,7 +16,8 @@ All requirements stated in "Compiling Everest yourself" in the [README.md](../RE
  Use it to quickly test any modifications to everest itself.
 
 Both scripts need to know where your game is, as such a variable called `CELESTEPATHGAME` is present
-in both of them, adjust it to fit yours.
+in `config.sh`, adjust it to fit yours, or override when calling the scripts, defaults to: `_celestegame` in 
+the repo root.
 
 If the scripts are integrated into an IDE workflow, it is recommended to force the ide to skip building, 
 since both of them will build the files already.
