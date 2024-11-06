@@ -276,33 +276,73 @@ namespace Celeste.Mod.UI {
         }
 
         private static void addTransitiveDependencies(Dictionary<string, EverestModuleMetadata> modDependencyGraph) {
-            List<EverestModuleMetadata> newlyMissing = new List<EverestModuleMetadata>();
-            do {
-                Logger.Verbose("OuiDependencyDownloader", "Checking for transitive dependencies...");
-
-                newlyMissing.Clear();
-
-                // All transitive dependencies must be either loaded or missing. If not, they're added as missing as well.
-                foreach (EverestModuleMetadata metadata in MissingDependencies) {
-                    if (!modDependencyGraph.TryGetValue(metadata.Name, out EverestModuleMetadata graphEntry)) {
-                        Logger.Verbose("OuiDependencyDownloader", $"{metadata.Name} was not found in the graph");
-                    } else {
-                        foreach (EverestModuleMetadata dependency in graphEntry.Dependencies) {
-                            if (Everest.Loader.DependencyLoaded(dependency)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded");
-                            } else if (MissingDependencies.Any(dep => dep.Name == dependency.Name) || newlyMissing.Any(dep => dep.Name == dependency.Name)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
+            List<EverestModuleMetadata> optionalDependencies = new();
+            List<EverestModuleMetadata> missing = new();
+            int index;
+            Logger.Verbose("OuiDependencyDownloader", "Checking for transitive dependencies...");
+            // no need to look back.
+            for (int i = 0; i < MissingDependencies.Count; i++) {
+                EverestModuleMetadata metadata = MissingDependencies[i];
+                if (!modDependencyGraph.TryGetValue(metadata.Name, out EverestModuleMetadata graphEntry)) {
+                    Logger.Verbose("OuiDependencyDownloader", $"{metadata.Name} was not found in the graph");
+                } else {
+                    missing.Clear();
+                    foreach (EverestModuleMetadata dependency in graphEntry.OptionalDependencies) {
+                        if (Everest.Loader.TryGetDependencyIgnoreVersion(dependency, out EverestModule module)) {
+                            if (Everest.Loader.VersionSatisfiesDependency(dependency.Version, module.Metadata.Version)) {
+                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded.");
                             } else {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} was added to the missing dependencies!");
-                                newlyMissing.Add(dependency);
+                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded, but is outdated");
+                                missing.Add(dependency);
                             }
+                        } else if ((index = MissingDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
+                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
+                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, MissingDependencies[index].Version)) {
+                                Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
+                                MissingDependencies[index] = dependency;
+                            }
+                        } else if ((index = optionalDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
+                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already optionally missing");
+                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, optionalDependencies[index].Version)) {
+                                Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
+                                optionalDependencies[index] = dependency;
+                            }
+                        } else {
+                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} was added to the missing optional dependencies!");
+                            optionalDependencies.Add(dependency);
+                        }
+
+                    }
+                    foreach (EverestModuleMetadata dependency in graphEntry.Dependencies) {
+                        if (Everest.Loader.DependencyLoaded(dependency)) {
+                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded");
+                        } else {
+                            missing.Add(dependency);
+                        }
+                    }
+                    foreach (EverestModuleMetadata dependency in missing) {
+                        if ((index = MissingDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
+                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
+                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, MissingDependencies[index].Version)) {
+                                Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
+                                MissingDependencies[index] = dependency;
+                            }
+                        } else {
+                            EverestModuleMetadata toadd = dependency;
+                            if ((index = optionalDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
+                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already optionally missing");
+                                if (!Everest.Loader.VersionSatisfiesDependency(optionalDependencies[index].Version, dependency.Version)) {
+                                    Logger.Verbose("OuiDependencyDownloader", $"and is newer.");
+                                    toadd = optionalDependencies[index];
+                                }
+                                optionalDependencies.RemoveAt(index);
+                            }
+                            Logger.Verbose("OuiDependencyDownloader", $"{toadd.Name} was added to the missing dependencies!");
+                            MissingDependencies.Add(toadd);
                         }
                     }
                 }
-
-                MissingDependencies.AddRange(newlyMissing);
-
-            } while (newlyMissing.Count > 0);
+            }
         }
 
         private static bool tryUnblacklist(EverestModuleMetadata dependency, Dictionary<EverestModuleMetadata, string> allModsInformation, HashSet<string> modsToUnblacklist) {
