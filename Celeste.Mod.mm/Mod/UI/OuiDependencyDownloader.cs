@@ -12,6 +12,7 @@ namespace Celeste.Mod.UI {
     class OuiDependencyDownloader : OuiLoggedProgress {
         public static List<EverestModuleMetadata> MissingDependencies;
 
+        public List<string> ModPathToLoad;
         private bool shouldAutoExit;
         private bool shouldRestart;
 
@@ -25,6 +26,7 @@ namespace Celeste.Mod.UI {
 
             Title = Dialog.Clean("DEPENDENCYDOWNLOADER_TITLE");
             task = new Task(downloadAllDependencies);
+            ModPathToLoad = new List<string>();
             Lines = new List<string>();
             Progress = 0;
             ProgressMax = 0;
@@ -206,11 +208,8 @@ namespace Celeste.Mod.UI {
                             Everest.Loader._Blacklist.RemoveWhere(item => item == modFilename);
 
                             // hot load the mod
-                            if (modFilename.EndsWith(".zip")) {
-                                Everest.Loader.LoadZip(Path.Combine(Everest.Loader.PathMods, modFilename));
-                            } else {
-                                Everest.Loader.LoadDir(Path.Combine(Everest.Loader.PathMods, modFilename));
-                            }
+                            string path = Path.Combine(Everest.Loader.PathMods, modFilename);
+                            ModPathToLoad.Add(path);
                         } catch (Exception e) {
                             // something bad happened during the mod hot loading, log it and prompt to restart the game to load the mod.
                             LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_UNBLACKLIST_FAILED"));
@@ -219,6 +218,21 @@ namespace Celeste.Mod.UI {
                             shouldRestart = true;
                             break;
                         }
+                    }
+                }
+
+                foreach (string path in ModPathToLoad) {
+                    try {
+                        if (File.Exists(path)) {
+                            Everest.Loader.LoadZip(path);
+                        } else {
+                            Everest.Loader.LoadDir(path);
+                        }
+                    } catch (Exception e) {
+                        LogLine(string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_INSTALL_FAILED"), Path.GetFileName(path)));
+                        Logger.LogDetailed(e);
+                        shouldAutoExit = false;
+                        break;
                     }
                 }
 
@@ -520,7 +534,7 @@ namespace Celeste.Mod.UI {
                         File.Delete(installDestination);
                     }
                     File.Move(downloadDestination, installDestination);
-                    Everest.Loader.LoadZip(installDestination);
+                    ModPathToLoad.Add(installDestination);
                 }
 
             } catch (Exception e) {
