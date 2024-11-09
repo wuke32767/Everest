@@ -221,18 +221,20 @@ namespace Celeste.Mod.UI {
                     }
                 }
 
-                foreach (string path in ModPathToLoad) {
-                    try {
-                        if (File.Exists(path)) {
-                            Everest.Loader.LoadZip(path);
-                        } else {
-                            Everest.Loader.LoadDir(path);
+                if (!shouldRestart && everestVersionToInstall == null) {
+                    foreach (string path in ModPathToLoad) {
+                        try {
+                            if (File.Exists(path)) {
+                                Everest.Loader.LoadZip(path);
+                            } else {
+                                Everest.Loader.LoadDir(path);
+                            }
+                        } catch (Exception e) {
+                            LogLine(string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_INSTALL_FAILED"), Path.GetFileName(path)));
+                            Logger.LogDetailed(e);
+                            shouldAutoExit = false;
+                            break;
                         }
-                    } catch (Exception e) {
-                        LogLine(string.Format(Dialog.Get("DEPENDENCYDOWNLOADER_INSTALL_FAILED"), Path.GetFileName(path)));
-                        Logger.LogDetailed(e);
-                        shouldAutoExit = false;
-                        break;
                     }
                 }
 
