@@ -19,25 +19,25 @@ namespace Celeste.Mod.Entities {
             Level level = Scene as Level;
             if (activate && !level.Session.Inventory.DreamDash) {
                 level.Session.Inventory.DreamDash = true;
-                foreach (DreamBlock dreamBlock in level.Tracker.GetEntities<DreamBlock>()) {
+                foreach (patch_DreamBlock dreamBlock in level.Tracker.GetEntities<DreamBlock>()) {
                     if (rumble) {
                         if (fastAnimation)
-                            dreamBlock.Add(new Coroutine(((patch_DreamBlock) dreamBlock).FastActivate(), true));
+                            dreamBlock.Add(new Coroutine(dreamBlock.UpdateFastRoutine(), true));
                         else
-                            dreamBlock.Add(new Coroutine(dreamBlock.Activate(), true));
+                            dreamBlock.Add(new Coroutine(dreamBlock.UpdateRoutine(), true));
                     } else
-                        dreamBlock.ActivateNoRoutine();
+                        dreamBlock.UpdateNoRoutine();
                 }
             } else if (!activate && level.Session.Inventory.DreamDash) {
                 level.Session.Inventory.DreamDash = false;
                 foreach (DreamBlock dreamBlock in level.Tracker.GetEntities<DreamBlock>()) {
                     if (rumble) {
                         if (fastAnimation)
-                            dreamBlock.Add(new Coroutine(((patch_DreamBlock) dreamBlock).FastDeactivate(), true));
+                            dreamBlock.Add(new Coroutine(((patch_DreamBlock) dreamBlock).UpdateFastRoutine(), true));
                         else
-                            dreamBlock.Add(new Coroutine(((patch_DreamBlock) dreamBlock).Deactivate(), true));
+                            dreamBlock.Add(new Coroutine(((patch_DreamBlock) dreamBlock).UpdateRoutine(), true));
                     } else
-                        ((patch_DreamBlock) dreamBlock).DeactivateNoRoutine();
+                        ((patch_DreamBlock) dreamBlock).UpdateNoRoutine();
                 }
             }
         }

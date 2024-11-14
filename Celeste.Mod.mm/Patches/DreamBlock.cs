@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿#pragma warning disable CS0626 // extern
+using Microsoft.Xna.Framework;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Monocle;
@@ -8,14 +9,19 @@ using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using MonoMod.InlineRT;
+using MonoMod.Utils;
 
 namespace Celeste {
     class patch_DreamBlock : DreamBlock {
+        static object DreamBlockPatch;
 
         internal Vector2 movementCounter {
             [MonoModLinkTo("Celeste.Platform", "get__movementCounter")] get;
         }
 
+
+        private bool flagState;
         private bool playerHasDreamDash;
         private LightOcclude occlude;
         private float whiteHeight;
@@ -23,6 +29,53 @@ namespace Celeste {
         private Shaker shaker;
         private Vector2 shake;
         private int randomSeed = Calc.Random.Next();
+        private string? flag;
+
+        public string? Flag {
+            get => flag;
+            set {
+                flag = value;
+                if (Scene is not null) {
+                    UpdateNoRoutine();
+                }
+            }
+        }
+
+        /// <summary>
+        /// determine if a dream block is activated.
+        /// you can add your custom state here. 
+        /// 
+        /// this will not update visual state automatically.
+        /// if your custom state is changed, update it manually.
+        /// as a reference, see <seealso cref="CheckFlags"/>.
+        /// 
+        /// be aware that there can be a "reverse" thing, 
+        /// that is, sometimes Activated will always not equal to your state.
+        /// better to have a thing similar to <see cref="flagState"/> to determine if you should update visual.
+        /// </summary>
+        public bool Activated {
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            get => Flag is null ? SceneAs<patch_Level>().Session.Inventory.DreamDash : flagState;
+        }
+
+        /// <summary>
+        /// determine if a dream block can be dash through.
+        /// mainly used for some temp state that should not change visual state.
+        /// for example, for Tera Helper, if DreamBlock is Fairy type and Madeline is Dragon type, there will be no effect.
+        /// then this property returns false. 
+        /// </summary>
+        public bool ActivatedPlus {
+            [MethodImpl(MethodImplOptions.NoInlining)]
+            get => Activated;
+        }
+
+        [MonoModIgnore]
+        [PatchDreamBlockAdded]
+        public override extern void Added(Scene scene);
+
+        [MonoModIgnore]
+        [PatchDreamBlockUpdate]
+        public override extern void Update();
 
         public patch_DreamBlock(EntityData data, Vector2 offset)
             : base(data, offset) {
@@ -38,10 +91,85 @@ namespace Celeste {
             ctor(position, width, height, node, fastMoving, oneUse, false);
         }
 
+        public extern void orig_ctor(EntityData data, Vector2 offset);
+
+        [MonoModConstructor]
+        public void ctor(EntityData data, Vector2 offset) {
+            orig_ctor(data, offset);
+            Flag = data.Attr("flag", null);
+        }
+        public void CheckFlags() {
+            bool fs = SceneAs<patch_Level>().Session.GetFlag(Flag);
+            if (flagState != fs) {
+                flagState = fs;
+                UpdateNoRoutine();
+            }
+        }
+
+        internal static bool Init(bool _, patch_DreamBlock self) {
+            self.flagState = self.SceneAs<patch_Level>().Session.GetFlag(self.Flag);
+            return self.Activated;
+        }
+
+        public void UpdateVisual(bool routine, bool fast) {
+            if (routine) {
+                if (fast) {
+                    Add(new Coroutine(UpdateFastRoutine()));
+                } else {
+                    Add(new Coroutine(UpdateRoutine()));
+                }
+            } else {
+                UpdateRoutine();
+            }
+        }
+
+#pragma warning disable CS0618 // obsolete
+        private static IEnumerator Empty() {
+            yield break;
+        }
+        public void UpdateNoRoutine() {
+            bool activated = Activated;
+            if (playerHasDreamDash != activated) {
+                if (activated) {
+                    ActivateNoRoutine();
+                } else {
+                    DeactivateNoRoutine();
+                }
+            }
+        }
+        public IEnumerator UpdateRoutine() {
+            bool activated = Activated;
+            if (playerHasDreamDash != activated) {
+                if (activated) {
+                    return Activate();
+                } else {
+                    return Deactivate();
+                }
+            }
+            return Empty();
+        }
+        public IEnumerator UpdateFastRoutine() {
+            bool activated = Activated;
+            if (playerHasDreamDash != activated) {
+                if (activated) {
+                    return Activate();
+                } else {
+                    return Deactivate();
+                }
+            }
+            return Empty();
+        }
+#pragma warning restore CS0618 
+
         [MonoModIgnore]
         [PatchDreamBlockSetup]
         public new extern void Setup();
 
+        [PatchDreamBlockAddObsolete($"Use {nameof(UpdateNoRoutine)} instead")]
+        [MonoModIgnore]
+        public new extern void ActivateNoRoutine();
+
+        [Obsolete($"Use {nameof(UpdateNoRoutine)} instead")]
         public void DeactivateNoRoutine() {
             if (playerHasDreamDash) {
                 playerHasDreamDash = false;
@@ -64,6 +192,11 @@ namespace Celeste {
             }
         }
 
+        [PatchDreamBlockAddObsolete($"Use {nameof(UpdateRoutine)} instead")]
+        [MonoModIgnore]
+        public new extern IEnumerator Activate();
+
+        [Obsolete($"Use {nameof(UpdateRoutine)} instead")]
         public IEnumerator Deactivate() {
             Level level = SceneAs<Level>();
             yield return 1f;
@@ -107,6 +240,7 @@ namespace Celeste {
             }
         }
 
+        [Obsolete($"Use {nameof(UpdateFastRoutine)} instead")]
         public IEnumerator FastDeactivate() {
             Level level = SceneAs<Level>();
             yield return null;
@@ -145,6 +279,7 @@ namespace Celeste {
             }
         }
 
+        [Obsolete($"Use {nameof(UpdateFastRoutine)} instead")]
         public IEnumerator FastActivate() {
             Level level = SceneAs<Level>();
             yield return null;
@@ -243,9 +378,50 @@ namespace MonoMod {
     /// same results). This fixes issue #556.
     /// </summary>
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchDreamBlockSetup))]
-    class PatchDreamBlockSetupAttribute : Attribute {}
+    class PatchDreamBlockSetupAttribute : Attribute { }
+
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchDreamBlockAdded))]
+    class PatchDreamBlockAddedAttribute : Attribute { }
+
+    /// <summary>
+    ///  BetterFreezeFrames is il hooking it
+    /// </summary>
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchDreamBlockUpdate))]
+    class PatchDreamBlockUpdateAttribute : Attribute { }
+
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchDreamBlockAddObsolete))]
+    class PatchDreamBlockAddObsolete : Attribute {
+        public PatchDreamBlockAddObsolete(string v) {
+            Info = v;
+        }
+
+        public string Info { get; set; }
+    }
 
     static partial class MonoModRules {
+
+        public static void PatchDreamBlockUpdate(ILContext context, CustomAttribute attrib) {
+            MethodDefinition m_patch_DreamBlock_UpdateHasDreamDash = MonoModRule.Modder.Module.GetType("Celeste.DreamBlock").FindMethod(nameof(Celeste.patch_DreamBlock.CheckFlags));
+            ILCursor cursor = new(context);
+            cursor.EmitLdarg0();
+            cursor.EmitCallvirt(m_patch_DreamBlock_UpdateHasDreamDash);
+        }
+        public static void PatchDreamBlockAddObsolete(ILContext context, CustomAttribute attrib) {
+
+            var attr = new CustomAttribute(context.Import(typeof(ObsoleteAttribute).GetConstructor(new Type[] { typeof(string) })));
+
+            attr.ConstructorArguments.Add(attrib.ConstructorArguments[0]);
+            context.Method.CustomAttributes.Add(attr);
+        }
+        public static void PatchDreamBlockAdded(ILContext context, CustomAttribute attrib) {
+            ILCursor cursor = new(context);
+            TypeDefinition t_patch_DreamBlock = MonoModRule.Modder.Module.GetType("Celeste.DreamBlock");
+            MethodDefinition m_patch_DreamBlock_Init = t_patch_DreamBlock.FindMethod(nameof(Celeste.patch_DreamBlock.Init));
+            // this.playerHasDreamDash = base.SceneAs<Level>().Session.Inventory.DreamDash;
+            cursor.GotoNext(MoveType.AfterLabel, i => i.MatchStfld("Celeste.DreamBlock", "playerHasDreamDash"));
+            cursor.EmitLdarg0();
+            cursor.EmitCall(m_patch_DreamBlock_Init);
+        }
 
         public static void PatchDreamBlockSetup(ILContext context, CustomAttribute attrib) {
             // Patch instructions before the 'conv.i4' cast to use doubles instead of floats

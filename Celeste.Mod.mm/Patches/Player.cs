@@ -15,6 +15,8 @@ using Mono.Cecil.Cil;
 using MonoMod.Cil;
 using MonoMod.InlineRT;
 using MonoMod.Utils;
+using Celeste;
+using System.Linq;
 
 namespace Celeste {
     class patch_Player : Player {
@@ -329,6 +331,43 @@ namespace Celeste {
         [MonoModIgnore]
         [PatchPlayerApproachMaxMove]
         private extern int NormalUpdate();
+
+        [MonoModPatch("<DashCoroutine>d__427")]
+        class patch_DashCoroutine {
+            [PatchPlayerDashCoroutine]
+            [MonoModIgnore]
+            private extern bool MoveNext();
+        }
+        internal static class DashCoroutineHelper {
+            public static bool CollideCheck(Entity self, Vector2 at) {
+                return Collide.Check(self, self.SceneAs<patch_Level>().Tracker.GetEntities<patch_DreamBlock>().Cast<patch_DreamBlock>().Where(x => x.ActivatedPlus), at);
+            }
+        }
+
+        [MonoModIgnore]
+        [PatchPlayerDreamDashCheck]
+        private extern bool DreamDashCheck(Vector2 dir);
+
+        internal static class DreamDashCheckHelper {
+            public static patch_DreamBlock CollideFirst(Entity self, Vector2 at) {
+                return Collide.First(self, self.SceneAs<patch_Level>().Tracker.GetEntities<patch_DreamBlock>().Cast<patch_DreamBlock>().Where(x => x.ActivatedPlus), at) as patch_DreamBlock;
+            }
+            public static bool CollideCheck(Entity self, Vector2 at) {
+                Vector2 position = self.Position;
+                self.Position = at;
+                bool result = _CollideCheck(self);
+                self.Position = position;
+                return result;
+            }
+            static bool _CollideCheck(Entity self) {
+                foreach (Entity entity in self.Scene.Tracker.Entities[typeof(Solid)]) {
+                    if ((entity is not patch_DreamBlock db || !db.ActivatedPlus) && Collide.Check(self, entity)) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+        }
     }
 
     public static class PlayerExt {
@@ -354,6 +393,18 @@ namespace MonoMod {
     /// </summary>
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchPlayerOrigUpdate))]
     class PatchPlayerOrigUpdateAttribute : Attribute { }
+
+    /// <summary>
+    /// Patch the DreamDashCheck method in Player instead of reimplementing it in Everest.
+    /// </summary>
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchPlayerDreamDashCheck))]
+    class PatchPlayerDreamDashCheckAttribute : Attribute { }
+
+    /// <summary>
+    /// Patch the DashCoroutine method in Player instead of reimplementing it in Everest.
+    /// </summary>
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchPlayerDashCoroutine))]
+    class PatchPlayerDashCoroutineAttribute : Attribute { }
 
     /// <summary>
     /// Patches the method to only set the player Speed.X if not in the RedDash state.
@@ -405,6 +456,45 @@ namespace MonoMod {
     class PatchPlayerApproachMaxMoveAttribute : Attribute { }
 
     static partial class MonoModRules {
+
+        public static void PatchPlayerDreamDashCheck(ILContext context, CustomAttribute attrib) {
+            TypeDefinition t_patch_Level = MonoModRule.Modder.Module.GetType("Celeste.Level");
+            TypeDefinition t_patch_Player_DreamDashCheckHelper = MonoModRule.Modder.Module.GetType($"Celeste.Player/{nameof(patch_Player.DreamDashCheckHelper)}");
+            MethodDefinition m_patch_Player_DreamDashCheckHelper_CollideFirst = t_patch_Player_DreamDashCheckHelper.FindMethod(nameof(patch_Player.DreamDashCheckHelper.CollideFirst));
+            MethodDefinition m_patch_Player_DreamDashCheckHelper_CollideCheck = t_patch_Player_DreamDashCheckHelper.FindMethod(nameof(patch_Player.DreamDashCheckHelper.CollideCheck));
+
+            ILCursor cursor = new ILCursor(context);
+            // if (this.Inventory.DreamDash &&
+            cursor.GotoNext(MoveType.After, instr => instr.MatchLdfld("Celeste.PlayerInventory", "DreamDash"));
+            cursor.EmitPop();
+            cursor.EmitLdcI4(1);
+
+            // DreamBlock dreamBlock = base.CollideFirst<DreamBlock>(this.Position + dir);
+            cursor.GotoNext(MoveType.Before, instr => instr.MatchCallOrCallvirt("Monocle.Entity", "CollideFirst"));
+            cursor.Remove();
+            cursor.EmitCall(m_patch_Player_DreamDashCheckHelper_CollideFirst);
+
+            // if (base.CollideCheck<Solid, DreamBlock>(...))
+            while (cursor.TryGotoNext(MoveType.Before, instr => instr.MatchCallOrCallvirt("Monocle.Entity", "CollideCheck"))) {
+                cursor.Remove();
+                cursor.EmitCall(m_patch_Player_DreamDashCheckHelper_CollideCheck);
+            }
+        }
+        public static void PatchPlayerDashCoroutine(ILContext context, CustomAttribute attrib) {
+            TypeDefinition t_patch_Player_DashCoroutineHelper = MonoModRule.Modder.Module.GetType($"Celeste.Player/{nameof(patch_Player.DashCoroutineHelper)}");
+            MethodDefinition m_patch_Player_DashCoroutineHelper_CollideCheck = t_patch_Player_DashCoroutineHelper.FindMethod(nameof(patch_Player.DashCoroutineHelper.CollideCheck));
+
+            // this.Inventory.DreamDash || !this.CollideCheck<DreamBlock>(this.Position + Vector2.UnitY)
+            ILCursor cursor = new ILCursor(context);
+
+            cursor.GotoNext(MoveType.After, instr => instr.MatchLdfld("Celeste.PlayerInventory", "DreamDash"));
+            cursor.EmitPop();
+            cursor.EmitLdcI4(1);
+
+            cursor.GotoNext(MoveType.Before, instr => instr.MatchCallOrCallvirt("Monocle.Entity", "CollideCheck"));
+            cursor.Remove();
+            cursor.EmitCall(m_patch_Player_DashCoroutineHelper_CollideCheck);
+        }
 
         public static void PatchPlayerOrigUpdate(ILContext context, CustomAttribute attrib) {
             MethodDefinition m_IsOverWater = context.Method.DeclaringType.FindMethod("System.Boolean _IsOverWater()");
