@@ -332,6 +332,10 @@ namespace Celeste {
         [PatchPlayerApproachMaxMove]
         private extern int NormalUpdate();
 
+        [MonoModIgnore]
+        [PatchPlayerDreamDashUpdate]
+        private extern int DreamDashUpdate();
+
         [MonoModPatch("<DashCoroutine>d__427")]
         class patch_DashCoroutine {
             [PatchPlayerDashCoroutine]
@@ -366,6 +370,16 @@ namespace Celeste {
                     }
                 }
                 return false;
+            }
+        }
+    
+        [MonoModIgnore]
+        [PatchPlayerDreamDashUpdate]
+        private extern bool DreamDashUpdate(Vector2 dir);
+
+        internal static class DreamDashUpdateHelper {
+            public static patch_DreamBlock CollideFirst(Entity self) {
+                return Collide.First(self, self.SceneAs<patch_Level>().Tracker.GetEntities<patch_DreamBlock>().Cast<patch_DreamBlock>().Where(x => x.ActivatedPlus||!x.DeactivatedIsSolid)) as patch_DreamBlock;
             }
         }
     }
@@ -455,6 +469,9 @@ namespace MonoMod {
     [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchPlayerApproachMaxMove))]
     class PatchPlayerApproachMaxMoveAttribute : Attribute { }
 
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.PatchPlayerDreamDashUpdate))]
+    class PatchPlayerDreamDashUpdateAttribute : Attribute { }
+
     static partial class MonoModRules {
 
         public static void PatchPlayerDreamDashCheck(ILContext context, CustomAttribute attrib) {
@@ -494,6 +511,17 @@ namespace MonoMod {
             cursor.GotoNext(MoveType.Before, instr => instr.MatchCallOrCallvirt("Monocle.Entity", "CollideCheck"));
             cursor.Remove();
             cursor.EmitCall(m_patch_Player_DashCoroutineHelper_CollideCheck);
+        }
+        public static void PatchPlayerDreamDashUpdate(ILContext context, CustomAttribute attrib) {
+            TypeDefinition t_patch_Player_DreamDashUpdateHelper = MonoModRule.Modder.Module.GetType($"Celeste.Player/{nameof(patch_Player.DreamDashUpdateHelper)}");
+            MethodDefinition m_patch_Player_DreamDashUpdateHelper_CollideCheck = t_patch_Player_DreamDashUpdateHelper.FindMethod(nameof(patch_Player.DreamDashUpdateHelper.CollideFirst));
+
+            // DreamBlock dreamBlock = base.CollideFirst<DreamBlock>();
+            ILCursor cursor = new ILCursor(context);
+
+            cursor.GotoNext(MoveType.Before, instr => instr.MatchCallOrCallvirt("Monocle.Entity", "CollideFirst"));
+            cursor.Remove();
+            cursor.EmitCall(m_patch_Player_DreamDashUpdateHelper_CollideCheck);
         }
 
         public static void PatchPlayerOrigUpdate(ILContext context, CustomAttribute attrib) {

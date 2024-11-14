@@ -31,6 +31,8 @@ namespace Celeste {
         private int randomSeed = Calc.Random.Next();
         private string? flag;
 
+        public bool DeactivatedIsSolid { [MethodImpl(MethodImplOptions.NoInlining)] get; private set; }
+
         public string? Flag {
             get => flag;
             set {
@@ -97,6 +99,7 @@ namespace Celeste {
         public void ctor(EntityData data, Vector2 offset) {
             orig_ctor(data, offset);
             Flag = data.Attr("flag", null);
+            DeactivatedIsSolid = data.Bool("deactivatedIsSolid", false);
         }
         public void CheckFlags() {
             bool fs = SceneAs<patch_Level>().Session.GetFlag(Flag);
