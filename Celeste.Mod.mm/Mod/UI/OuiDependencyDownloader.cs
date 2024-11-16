@@ -72,7 +72,7 @@ namespace Celeste.Mod.UI {
                 if (modDependencyGraph != null) {
                     addTransitiveDependencies(modDependencyGraph);
                 }
-
+                
                 // load information on all installed mods, so that we can spot blacklisted ones easily.
                 LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_LOADING_INSTALLED_MODS"));
 
@@ -291,74 +291,110 @@ namespace Celeste.Mod.UI {
             }
         }
 
+        class DependencyNode {
+            public bool Optional;
+            public EverestModuleMetadata metadata;
+            public List<DependencyNode> Dependencies = new List<DependencyNode>();
+            public int RefCount = 1;
+            public DependencyNode(EverestModuleMetadata from, bool opt) {
+                Optional = opt;
+                metadata = from;
+            }
+        }
         private static void addTransitiveDependencies(Dictionary<string, EverestModuleMetadata> modDependencyGraph) {
-            List<EverestModuleMetadata> optionalDependencies = new();
-            List<EverestModuleMetadata> missing = new();
+            //Topological Sorting
+            List<DependencyNode> missingDependencies = MissingDependencies.Select(x => new DependencyNode(x, false) { RefCount = 0, }).ToList();
             int index;
             Logger.Verbose("OuiDependencyDownloader", "Checking for transitive dependencies...");
-            // no need to look back.
-            for (int i = 0; i < MissingDependencies.Count; i++) {
-                EverestModuleMetadata metadata = MissingDependencies[i];
+            for (int i = 0; i < missingDependencies.Count; i++) {
+                // all mods in fromt of i is
+                // | optional -> no dependencies was added [a]
+                // | not opt -> all dependencies was added [b]
+                // 
+                // all mods behind i is
+                // | optional -> no dependencies was added [c]
+                // | not opt -> no dependencies was added [d]
+                 
+                DependencyNode metadatanode = missingDependencies[i];
+                if (metadatanode.Optional) {
+                    // we're moving [c] to [a]
+                    // no-op
+                    continue;
+                }
+                // we're moving [d] to [b]
+                EverestModuleMetadata metadata = metadatanode.metadata;
                 if (!modDependencyGraph.TryGetValue(metadata.Name, out EverestModuleMetadata graphEntry)) {
                     Logger.Verbose("OuiDependencyDownloader", $"{metadata.Name} was not found in the graph");
                 } else {
-                    missing.Clear();
-                    foreach (EverestModuleMetadata dependency in graphEntry.OptionalDependencies) {
-                        if (Everest.Loader.TryGetDependencyIgnoreVersion(dependency, out EverestModule module)) {
-                            if (Everest.Loader.VersionSatisfiesDependency(dependency.Version, module.Metadata.Version)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded.");
-                            } else {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded, but is outdated");
-                                missing.Add(dependency);
-                            }
-                        } else if ((index = MissingDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
-                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
-                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, MissingDependencies[index].Version)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
-                                MissingDependencies[index] = dependency;
-                            }
-                        } else if ((index = optionalDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
-                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already optionally missing");
-                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, optionalDependencies[index].Version)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
-                                optionalDependencies[index] = dependency;
-                            }
-                        } else {
-                            Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} was added to the missing optional dependencies!");
-                            optionalDependencies.Add(dependency);
+                    foreach ((EverestModuleMetadata dependency, bool _opt) in graphEntry.Dependencies.Select(x => (x, false)).Concat(graphEntry.OptionalDependencies.Select(x => (x, true)))) {
+                        bool opt = _opt;
+                        bool has = Everest.Loader.TryGetDependencyIgnoreVersion(dependency, out EverestModule module);
+                        bool version = has && Everest.Loader.VersionSatisfiesDependency(dependency.Version, module.Metadata.Version);
+                        bool loaded = false;
+                        if (opt && has) {
+                            opt = false;
                         }
-
-                    }
-                    foreach (EverestModuleMetadata dependency in graphEntry.Dependencies) {
-                        if (Everest.Loader.DependencyLoaded(dependency)) {
+                        if (has && version) {
+                            loaded = true;
+                        }
+                        //if (opt) {
+                        //    loaded = false;
+                        //}
+                        if (loaded) {
+                            // it's already loaded, so we can ignore it.
+                            // if other mods are not satisfied with its version, we need reboot.
+                            // in this case, it's not important if it's not ordered.
                             Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded");
-                        } else {
-                            missing.Add(dependency);
-                        }
-                    }
-                    foreach (EverestModuleMetadata dependency in missing) {
-                        if ((index = MissingDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
+                        } else if ((index = missingDependencies.FindIndex(dep => dep.metadata.Name == dependency.Name)) > 0) {
+                            DependencyNode found = missingDependencies[index];
+                            found.RefCount++;
                             Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
-                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, MissingDependencies[index].Version)) {
+                            if (!Everest.Loader.VersionSatisfiesDependency(dependency.Version, found.metadata.Version)) {
                                 Logger.Verbose("OuiDependencyDownloader", $"but is outdated.");
-                                MissingDependencies[index] = dependency;
+                                found.metadata = dependency;
                             }
+                            if (found.Optional && !opt) {
+                                found.Optional = false;
+                                if (index < i) {
+                                    // [a] -> [b]
+                                    // actually it's [a] -> [d]
+                                    missingDependencies.RemoveAt(index);
+                                    missingDependencies.Add(found);
+                                    i--;
+                                } // else { [c] -> [d] nop }
+                            }
+                            metadatanode.Dependencies.Add(found);
                         } else {
                             EverestModuleMetadata toadd = dependency;
-                            if ((index = optionalDependencies.FindIndex(dep => dep.Name == dependency.Name)) >= 0) {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already optionally missing");
-                                if (!Everest.Loader.VersionSatisfiesDependency(optionalDependencies[index].Version, dependency.Version)) {
-                                    Logger.Verbose("OuiDependencyDownloader", $"and is newer.");
-                                    toadd = optionalDependencies[index];
-                                }
-                                optionalDependencies.RemoveAt(index);
-                            }
                             Logger.Verbose("OuiDependencyDownloader", $"{toadd.Name} was added to the missing dependencies!");
-                            MissingDependencies.Add(toadd);
+                            DependencyNode item = new DependencyNode(toadd, opt);
+                            missingDependencies.Add(item);
+                            metadatanode.Dependencies.Add(item);
                         }
                     }
                 }
             }
+            List<EverestModuleMetadata> Result = new List<EverestModuleMetadata>();
+            List<DependencyNode> Prepared = missingDependencies.Where(x => x.RefCount == 0).ToList();
+            for (int i = 0; i < Prepared.Count; i++) {
+                DependencyNode metadatanode = Prepared[i];
+                if (metadatanode.Optional) {
+                    continue;
+                }
+                Result.Add(metadatanode.metadata);
+                foreach (DependencyNode dep in metadatanode.Dependencies) {
+                    dep.RefCount--;
+                    if (dep.RefCount == 0) {
+                        Prepared.Add(dep);
+                    }
+                }
+            }
+            if (Prepared.Count != missingDependencies.Count) {
+                Logger.Verbose("OuiDependencyDownloader", $"WA");
+            }
+            MissingDependencies = Result;
+
+            MissingDependencies.Reverse();
         }
 
         private static bool tryUnblacklist(EverestModuleMetadata dependency, Dictionary<EverestModuleMetadata, string> allModsInformation, HashSet<string> modsToUnblacklist) {
