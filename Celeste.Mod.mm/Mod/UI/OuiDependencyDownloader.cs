@@ -72,7 +72,16 @@ namespace Celeste.Mod.UI {
                 if (modDependencyGraph != null) {
                     addTransitiveDependencies(modDependencyGraph);
                 }
-                
+                lock (Everest._Modules) {
+                    if (Everest._Modules.SelectMany(mod => mod.Metadata.OptionalDependencies).Any(install => {
+                        if (MissingDependencies.Any(todo => todo.Name == install.Name)) {
+                            return true;
+                        }
+                        return false;
+                    })) {
+                        shouldRestart = true;
+                    }
+                }
                 // load information on all installed mods, so that we can spot blacklisted ones easily.
                 LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_LOADING_INSTALLED_MODS"));
 
@@ -314,7 +323,7 @@ namespace Celeste.Mod.UI {
                 // all mods behind i is
                 // | optional -> no dependencies was added [c]
                 // | not opt -> no dependencies was added [d]
-                 
+
                 DependencyNode metadatanode = missingDependencies[i];
                 if (metadatanode.Optional) {
                     // we're moving [c] to [a]
