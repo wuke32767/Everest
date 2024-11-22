@@ -156,7 +156,7 @@ namespace Celeste.Mod {
                 },
                 new Source {
                     Name = "updater_src_beta",
-                    Description = "updater_src_release_github",
+                    Description = "updater_src_buildbot_azure",
                     MinimumBuild = 3960,
 
                     Index = GetEverestUpdaterDatabaseURL,
