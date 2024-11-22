@@ -20,3 +20,6 @@ matter, **you must override it** in order to use the build scripts.
 
 If the scripts are integrated into an IDE workflow, it is recommended to force the ide to skip building, 
 since both of them will build the files already.
+
+There're f# version of these script. They should do the same as the bash script, but they are cross-platform.
+Run `dotnet fsi <script_name>.fsx`.
