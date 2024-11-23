@@ -7,15 +7,16 @@ using MonoMod;
 using MonoMod.Cil;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Xml.Serialization;
 
 namespace Celeste {
-    public class patch_Session {
+    public class patch_Session : Session {
 
         public class Slider {
             private patch_Session _Session;
 
-            public readonly string Name;
+            public string Name { get; init; }
             internal float _Value;
 
             internal Slider(patch_Session session, string name, float value = 0f) {
@@ -26,15 +27,21 @@ namespace Celeste {
 
             public float Value {
                 get => _Value;
-                set => _Session.SetSlider(this, value);
+                set {
+                    float previous = _Value;
+                    _Value = value;
+                    Everest.Events.Session.SliderChanged(_Session, this, previous);
+                }
             }
         }
 
         /// <summary>
         /// Used internally for serialization.
         /// </summary>
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public static class SerializationOnly {
             [Serializable]
+            [EditorBrowsable(EditorBrowsableState.Never)]
             public struct Slider {
                 [XmlAttribute]
                 public string Name;
@@ -56,6 +63,7 @@ namespace Celeste {
         ///
         /// NOTE: this cannot be private or [Obselete] because either of those would break serialization.
         [XmlArray("Sliders")]
+        [EditorBrowsable(EditorBrowsableState.Never)]
         public SerializationOnly.Slider[] SlidersSerializationOnly {
             get {
                 var result = new SerializationOnly.Slider[_Sliders.Count];
@@ -75,14 +83,13 @@ namespace Celeste {
 
         public bool RestartedFromGolden;
 
-        public patch_Session(AreaKey area, string checkpoint = null, AreaStats oldStats = null) { }
+        public patch_Session(AreaKey area, string checkpoint = null, AreaStats oldStats = null) : base(area, checkpoint, oldStats) { }
 
-        public extern void orig_ctor();
-
+        [MonoModReplace]
         [MonoModConstructor]
-        public void ctor() {
-            orig_ctor();
-
+        private void ctor() {
+            JustStarted = true;
+            InArea = true;
             Sliders = _Sliders = new Dictionary<string, Slider>();
         }
 
@@ -110,28 +117,16 @@ namespace Celeste {
         public Slider GetSliderObject(string slider) {
             if (!_Sliders.TryGetValue(slider, out Slider obj)) {
                 _Sliders[slider] = obj = new(this, slider, 0f);
-                Everest.Events.Session.SliderChanged(obj, null);
+                Everest.Events.Session.SliderChanged(this, obj, null);
             }
             return obj;
         }
 
-        public void SetSlider(Slider slider, float value) {
-            float previous = slider._Value;
-            slider._Value = value;
-            Everest.Events.Session.SliderChanged(slider, previous);
-        }
-
         public void SetSlider(string slider, float value)
-            => SetSlider(GetSliderObject(slider), value);
-
-        public void AddToSlider(Slider slider, float amount)
-            => SetSlider(slider, slider._Value + amount);
+            => GetSliderObject(slider).Value = value;
 
         public void AddToSlider(string slider, float amount)
-            => AddToSlider(GetSliderObject(slider), amount);
-
-        public IEnumerator<Slider> EnumerateSliders()
-            => _Sliders.Values.GetEnumerator();
+            => GetSliderObject(slider).Value += amount;
 
     }
 }

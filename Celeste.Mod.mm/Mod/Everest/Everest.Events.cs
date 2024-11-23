@@ -182,9 +182,9 @@ namespace Celeste.Mod {
             }
 
             public static class Session {
-                public static event Action<patch_Session.Slider, float?> OnSliderChanged;
-                internal static void SliderChanged(patch_Session.Slider slider, float? previous)
-                    => OnSliderChanged?.Invoke(slider, previous);
+                public static event Action<patch_Session, patch_Session.Slider, float?> OnSliderChanged;
+                internal static void SliderChanged(patch_Session session, patch_Session.Slider slider, float? previous)
+                    => OnSliderChanged?.Invoke(session, slider, previous);
             }
 
             public static class Player {
