@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using _Decal = Celeste.Decal;
 using _EventTrigger = Celeste.EventTrigger;
 using _Level = Celeste.Level;
-using _Session = Celeste.Session;
 using _OuiJournal = Celeste.OuiJournal;
 using _OuiMainMenu = Celeste.OuiMainMenu;
 using _Player = Celeste.Player;
@@ -165,26 +164,20 @@ namespace Celeste.Mod {
                 internal static void LoadLevel(_Level level, _Player.IntroTypes playerIntro, bool isFromLoader)
                     => OnLoadLevel?.Invoke(level, playerIntro, isFromLoader);
 
-                public delegate void EnterHandler(_Session session, bool fromSaveData);
+                public delegate void EnterHandler(Session session, bool fromSaveData);
                 public static event EnterHandler OnEnter;
-                internal static void Enter(_Session session, bool fromSaveData)
+                internal static void Enter(Session session, bool fromSaveData)
                     => OnEnter?.Invoke(session, fromSaveData);
 
-                public delegate void ExitHandler(_Level level, LevelExit exit, LevelExit.Mode mode, _Session session, HiresSnow snow);
+                public delegate void ExitHandler(_Level level, LevelExit exit, LevelExit.Mode mode, Session session, HiresSnow snow);
                 public static event ExitHandler OnExit;
-                internal static void Exit(_Level level, LevelExit exit, LevelExit.Mode mode, _Session session, HiresSnow snow)
+                internal static void Exit(_Level level, LevelExit exit, LevelExit.Mode mode, Session session, HiresSnow snow)
                     => OnExit?.Invoke(level, exit, mode, session, snow);
 
                 public delegate void CompleteHandler(_Level level);
                 public static event CompleteHandler OnComplete;
                 internal static void Complete(_Level level)
                     => OnComplete?.Invoke(level);
-            }
-
-            public static class Session {
-                public static event Action<patch_Session, patch_Session.Slider, float?> OnSliderChanged;
-                internal static void SliderChanged(patch_Session session, patch_Session.Slider slider, float? previous)
-                    => OnSliderChanged?.Invoke(session, slider, previous);
             }
 
             public static class Player {
