@@ -1,16 +1,90 @@
 #pragma warning disable CS0626 // Method, operator, or accessor is marked external and has no attributes on it
 
+using Celeste.Mod;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using MonoMod;
 using MonoMod.Cil;
 using System;
+using System.Collections.Generic;
+using System.Xml.Serialization;
 
 namespace Celeste {
     public class patch_Session {
+
+        public class Slider {
+            private patch_Session _Session;
+
+            public readonly string Name;
+            internal float _Value;
+
+            internal Slider(patch_Session session, string name, float value = 0f) {
+                _Session = session;
+                Name = name;
+                _Value = value;
+            }
+
+            public float Value {
+                get => _Value;
+                set => _Session.SetSlider(this, value);
+            }
+        }
+
+        /// <summary>
+        /// Used internally for serialization.
+        /// </summary>
+        public static class SerializationOnly {
+            [Serializable]
+            public struct Slider {
+                [XmlAttribute]
+                public string Name;
+                [XmlAttribute]
+                public float Value;
+            }
+        }
+
+        [XmlIgnore]
+        private Dictionary<string, Slider> _Sliders;
+
+        [XmlIgnore]
+        public IReadOnlyDictionary<string, Slider> Sliders;
+
+        /// <summary>
+        /// Used internally for serialization; getting or setting this will cause issues.
+        /// Instead, use <see cref="Sliders" />.
+        /// </summary>
+        ///
+        /// NOTE: this cannot be private or [Obselete] because either of those would break serialization.
+        [XmlArray("Sliders")]
+        public SerializationOnly.Slider[] SlidersSerializationOnly {
+            get {
+                var result = new SerializationOnly.Slider[_Sliders.Count];
+                int i = 0;
+                foreach ((string name, Slider slider) in _Sliders) {
+                    result[i++] = new() { Name = name, Value = slider._Value };
+                }
+                return result;
+            }
+            set {
+                _Sliders.Clear();
+                foreach (SerializationOnly.Slider slider in value) {
+                    _Sliders[slider.Name] = new(this, slider.Name, slider.Value);
+                }
+            }
+        }
+
         public bool RestartedFromGolden;
 
         public patch_Session(AreaKey area, string checkpoint = null, AreaStats oldStats = null) { }
+
+        public extern void orig_ctor();
+
+        [MonoModConstructor]
+        public void ctor() {
+            orig_ctor();
+
+            Sliders = _Sliders = new Dictionary<string, Slider>();
+        }
 
         [PatchSessionOrigCtor]
         public extern void orig_ctor(AreaKey area, string checkpoint = null, AreaStats oldStats = null);
@@ -25,6 +99,40 @@ namespace Celeste {
             }
             orig_ctor(area, checkpoint, oldStats);
         }
+
+        public float GetSlider(string slider) {
+            if (_Sliders.TryGetValue(slider, out Slider obj)) {
+                return obj._Value;
+            }
+            return 0f;
+        }
+
+        public Slider GetSliderObject(string slider) {
+            if (!_Sliders.TryGetValue(slider, out Slider obj)) {
+                _Sliders[slider] = obj = new(this, slider, 0f);
+                Everest.Events.Session.SliderChanged(obj, null);
+            }
+            return obj;
+        }
+
+        public void SetSlider(Slider slider, float value) {
+            float previous = slider._Value;
+            slider._Value = value;
+            Everest.Events.Session.SliderChanged(slider, previous);
+        }
+
+        public void SetSlider(string slider, float value)
+            => SetSlider(GetSliderObject(slider), value);
+
+        public void AddToSlider(Slider slider, float amount)
+            => SetSlider(slider, slider._Value + amount);
+
+        public void AddToSlider(string slider, float amount)
+            => AddToSlider(GetSliderObject(slider), amount);
+
+        public IEnumerator<Slider> EnumerateSliders()
+            => _Sliders.Values.GetEnumerator();
+
     }
 }
 
