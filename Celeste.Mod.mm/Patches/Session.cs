@@ -54,7 +54,7 @@ namespace Celeste {
         private Dictionary<string, Slider> _Sliders;
 
         [XmlIgnore]
-        public IReadOnlyDictionary<string, Slider> Sliders;
+        public IReadOnlyDictionary<string, Slider> Sliders => _Sliders;
 
         /// <summary>
         /// Used internally for serialization; getting or setting this will cause issues.
@@ -90,7 +90,7 @@ namespace Celeste {
         private void ctor() {
             JustStarted = true;
             InArea = true;
-            Sliders = _Sliders = new Dictionary<string, Slider>();
+            _Sliders = new Dictionary<string, Slider>();
         }
 
         [PatchSessionOrigCtor]
