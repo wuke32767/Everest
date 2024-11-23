@@ -88,6 +88,17 @@ namespace Celeste {
         [MonoModReplace]
         [MonoModConstructor]
         private void ctor() {
+            Audio = new();
+            Flags = new();
+            LevelFlags = new();
+            Strawberries = new();
+            DoNotLoad = new();
+            Keys = new();
+            Counters = new();
+            SummitGems = new bool[6];
+            FirstLevel = true;
+            DarkRoomAlpha = 0.75f;
+
             JustStarted = true;
             InArea = true;
             _Sliders = new Dictionary<string, Slider>();
