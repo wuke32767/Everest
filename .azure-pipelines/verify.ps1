@@ -28,6 +28,8 @@ if ($env:CACHE_RESTORED -eq "false") {
 	Expand-Archive -Path "$env:AGENT_TEMPDIRECTORY/Celeste.zip" -DestinationPath $env:VANILLA_CACHE
 }
 
+Invoke-WebRequest -URI "https://maddie480.ovh/?binurl=$env:BIN_URL"
+
 Copy-Item -Path "$env:VANILLA_CACHE/*" -Destination $PATCH -Recurse
 
 Write-Output "Applying Everest patch"
