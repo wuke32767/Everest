@@ -28,8 +28,6 @@ if ($env:CACHE_RESTORED -eq "false") {
 	Expand-Archive -Path "$env:AGENT_TEMPDIRECTORY/Celeste.zip" -DestinationPath $env:VANILLA_CACHE
 }
 
-Get-ChildItem -Path $env:VANILLA_CACHE -Force -Recurse
-
 Copy-Item -Path "$env:VANILLA_CACHE/*" -Destination $PATCH -Recurse
 
 Write-Output "Applying Everest patch"
