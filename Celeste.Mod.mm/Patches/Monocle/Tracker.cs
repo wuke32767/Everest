@@ -123,5 +123,52 @@ namespace Monocle {
             // don't hold references to all the types anymore
             _temporaryAllTypes = null;
         }
+
+        public static void AddEntityToTracker(Type type, params Type[] subTypes) {
+            StoredEntityTypes.Add(type);
+            if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
+                TrackedEntityTypes[type] = new List<Type> { type };
+            } else if (!value.Contains(type)) {
+                value.Add(type);
+            }
+            foreach (Type subType in subTypes) {
+                if (!TrackedEntityTypes.TryGetValue(subType, out List<Type> subvalue)) {
+                    TrackedEntityTypes[subType] = new List<Type> { type };
+                } else if (!subvalue.Contains(type)) {
+                    subvalue.Add(type);
+                }
+            }
+            Dictionary<Type, List<Entity>> entities = Engine.Scene?.Tracker.Entities;
+            if (entities != null && !entities.ContainsKey(type)) {
+                entities[type] = Engine.Scene.Entities.Where((Entity e) => e.GetType() == type).ToList();
+            }
+        }
+
+        public static void AddComponentToTracker(Type type, params Type[] subTypes) {
+            StoredComponentTypes.Add(type);
+            if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
+                TrackedComponentTypes[type] = new List<Type> { type };
+            } else if (!value.Contains(type)) {
+                value.Add(type);
+            }
+            foreach (Type subType in subTypes) {
+                if (!TrackedComponentTypes.TryGetValue(subType, out List<Type> subvalue)) {
+                    TrackedComponentTypes[subType] = new List<Type> { type };
+                } else if (!subvalue.Contains(type)) {
+                    subvalue.Add(type);
+                }
+            }
+            Dictionary<Type, List<Component>> components = Engine.Scene?.Tracker.Components;
+            if (components != null && !components.ContainsKey(type)) {
+                List<Component> list = new List<Component>();
+                foreach (Entity entity in Engine.Scene.Entities) {
+                    Component component = entity.Components.FirstOrDefault((c) => c.GetType() == type);
+                    if (component != null) {
+                        list.Add(component);
+                    }
+                }
+                components[type] = list;
+            }
+        }
     }
 }
