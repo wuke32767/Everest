@@ -26,6 +26,9 @@ using System.Runtime.CompilerServices;
 namespace Celeste {
     class patch_Level : Level {
 
+        public int NewDreamBlockCounter;
+
+        public bool HasNewDreamBlock => NewDreamBlockCounter > 0;
         // We're effectively in GameLoader, but still need to "expose" private fields to our mod.
         private static EventInstance PauseSnapshot;
         public static EventInstance _PauseSnapshot => PauseSnapshot;
@@ -823,7 +826,7 @@ namespace MonoMod {
 
             FieldDefinition f_DecalData_Rotation = t_DecalData.FindField("Rotation");
             FieldDefinition f_DecalData_ColorHex = t_DecalData.FindField("ColorHex");
-            FieldDefinition f_DecalData_Depth    = t_DecalData.FindField("Depth");
+            FieldDefinition f_DecalData_Depth = t_DecalData.FindField("Depth");
 
             FieldDefinition f_Decal_DepthSetByPlacement = t_Decal.FindField("DepthSetByPlacement");
 

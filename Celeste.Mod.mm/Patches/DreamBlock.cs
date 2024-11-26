@@ -31,13 +31,22 @@ namespace Celeste {
         private int randomSeed = Calc.Random.Next();
         private string? flag;
 
-        public bool DeactivatedIsSolid { [MethodImpl(MethodImplOptions.NoInlining)] get; private set; }
+        public bool DeactivatedIsSolid { get; set; }
 
         public string? Flag {
             get => flag;
             set {
+                if (Scene is not null) {
+                    if (value is null && flag is not null) {
+                        SceneAs<patch_Level>().NewDreamBlockCounter--;
+                    }
+                    if (value is not null && flag is null) {
+                        SceneAs<patch_Level>().NewDreamBlockCounter++;
+                    }
+                }
                 flag = value;
                 if (Scene is not null) {
+                    CheckFlags();
                     UpdateNoRoutine();
                 }
             }
@@ -45,15 +54,17 @@ namespace Celeste {
 
         /// <summary>
         /// determine if a dream block is activated.
-        /// you can add your custom state here. 
-        /// 
+        /// you can add your custom state here by hooking it.
+        /// also change <see cref="patch_Level.NewDreamBlockCounter"/>,
+        /// or it may not run correctly.
+        /// <br /><br />
         /// this will not update visual state automatically.
         /// if your custom state is changed, update it manually.
-        /// as a reference, see <seealso cref="CheckFlags"/>.
-        /// 
-        /// be aware that there can be a "reverse" thing, 
-        /// that is, sometimes Activated will always not equal to your state.
-        /// better to have a thing similar to <see cref="flagState"/> to determine if you should update visual.
+        /// <br /><br />
+        /// anyone can add their own state,
+        /// so better to have a thing similar to <see cref="flagState"/> to determine if you should update visual.
+        /// <br /><br />
+        /// as a reference, see how <see cref="Flag"/> was implemented.
         /// </summary>
         public bool Activated {
             [MethodImpl(MethodImplOptions.NoInlining)]
@@ -69,6 +80,13 @@ namespace Celeste {
         public bool ActivatedPlus {
             [MethodImpl(MethodImplOptions.NoInlining)]
             get => Activated;
+        }
+
+        public override void Removed(Scene scene) {
+            if (Flag is not null) {
+                SceneAs<patch_Level>().NewDreamBlockCounter--;
+            }
+            base.Removed(scene);
         }
 
         [MonoModIgnore]
@@ -109,8 +127,14 @@ namespace Celeste {
             }
         }
 
+        /// <summary>
+        /// Aims to patch <see cref="Added"/>. <see cref="Added"/> has been ilhooked, so we can only patch it in this way.
+        /// </summary>
         internal static bool Init(bool _, patch_DreamBlock self) {
-            self.flagState = self.SceneAs<patch_Level>().Session.GetFlag(self.Flag);
+            if (self.Flag is not null) {
+                self.SceneAs<patch_Level>().NewDreamBlockCounter++;
+                self.flagState = self.SceneAs<patch_Level>().Session.GetFlag(self.Flag);
+            }
             return self.Activated;
         }
 
@@ -341,7 +365,7 @@ namespace Celeste {
         // Patch XNA/FNA jank in Tween.OnUpdate lambda
         [MonoModPatch("<>c__DisplayClass22_0")]
         class patch_AddedLambdas {
-            
+
             [MonoModPatch("<>4__this")]
             private patch_DreamBlock _this = default;
             private Vector2 start = default, end = default;
