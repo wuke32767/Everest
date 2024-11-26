@@ -140,7 +140,7 @@ namespace Monocle {
             }
             Dictionary<Type, List<Entity>> entities = Engine.Scene?.Tracker.Entities;
             if (entities != null && !entities.ContainsKey(type)) {
-                entities[type] = Engine.Scene.Entities.Where((Entity e) => e.GetType() == type).ToList();
+                entities[type] = Engine.Scene.Entities.Where((e) => e.GetType() == type).ToList();
             }
         }
 
@@ -162,8 +162,7 @@ namespace Monocle {
             if (components != null && !components.ContainsKey(type)) {
                 List<Component> list = new List<Component>();
                 foreach (Entity entity in Engine.Scene.Entities) {
-                    Component component = entity.Components.FirstOrDefault((c) => c.GetType() == type);
-                    if (component != null) {
+                    foreach (Component component in entity.Components.Where((c) => c.GetType() == type)) {
                         list.Add(component);
                     }
                 }
