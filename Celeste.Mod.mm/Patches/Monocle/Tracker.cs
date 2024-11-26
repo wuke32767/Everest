@@ -160,7 +160,7 @@ namespace Monocle {
             }
             Dictionary<Type, List<Component>> components = Engine.Scene?.Tracker.Components;
             if (components != null && !components.ContainsKey(type)) {
-                List<Component> list = new List<Component>();
+                List<Component> list = new();
                 foreach (Entity entity in Engine.Scene.Entities) {
                     foreach (Component component in entity.Components.Where((c) => c.GetType() == type)) {
                         list.Add(component);
