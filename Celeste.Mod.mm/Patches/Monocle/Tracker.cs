@@ -124,32 +124,56 @@ namespace Monocle {
             _temporaryAllTypes = null;
         }
 
-        public void AddEntityToTracker(Type type, params Type[] subTypes) {
-            StoredEntityTypes.Add(type);
-            if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
-                TrackedEntityTypes[type] = new List<Type> { type };
-            } else if (!value.Contains(type)) {
-                value.Add(type);
+        public static void AddTypeToTracker(Type type, bool inheritAll) {
+            if (inheritAll) {
+                AddTypeToTracker(type, GetSubclasses(type).ToArray());
             }
-            foreach (Type subType in subTypes) {
-                if (!TrackedEntityTypes.TryGetValue(subType, out List<Type> subvalue)) {
-                    TrackedEntityTypes[subType] = new List<Type> { type };
-                } else if (!subvalue.Contains(type)) {
-                    subvalue.Add(type);
-                }
-            }
-            if (!Entities.ContainsKey(type)) {
-                Entities[type] = Engine.Scene.Entities.Where((e) => e.GetType() == type).ToList();
+            else {
+                AddTypeToTracker(type);
             }
         }
 
-        public void AddComponentToTracker(Type type, params Type[] subTypes) {
-            StoredComponentTypes.Add(type);
-            if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
-                TrackedComponentTypes[type] = new List<Type> { type };
-            } else if (!value.Contains(type)) {
-                value.Add(type);
+        public static void AddTypeToTracker(Type type, params Type[] subtypes) {
+            if (typeof(Entity).IsAssignableFrom(type)) {
+                StoredEntityTypes.Add(type);
+                if (!type.IsAbstract) {
+                    if (!TrackedEntityTypes.ContainsKey(type)) {
+                        TrackedEntityTypes.Add(type, new List<Type>());
+                    }
+                    TrackedEntityTypes[type].AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    TrackedEntityTypes[type] = TrackedEntityTypes[type].Distinct().ToList();
+                }
+                foreach (Type subtype in subtypes) {
+                    if (!subtype.IsAbstract) {
+                        if (!TrackedEntityTypes.ContainsKey(subtype))
+                            TrackedEntityTypes.Add(subtype, new List<Type>());
+                        TrackedEntityTypes[subtype].AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        TrackedEntityTypes[subtype] = TrackedEntityTypes[subtype].Distinct().ToList();
+                    }
+                }
             }
+            else if (typeof(Component).IsAssignableFrom(type)) {
+                StoredComponentTypes.Add(type);
+                if (!type.IsAbstract) {
+                    if (!TrackedComponentTypes.ContainsKey(type)) {
+                        TrackedComponentTypes.Add(type, new List<Type>());
+                    }
+                    TrackedComponentTypes[type].AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    TrackedComponentTypes[type] = TrackedComponentTypes[type].Distinct().ToList();
+                }
+                foreach(Type subtype in subtypes) {
+                    if (!subtype.IsAbstract) {
+                        if (!TrackedComponentTypes.ContainsKey(subtype))
+                            TrackedComponentTypes.Add(subtype, new List<Type>());
+                        TrackedComponentTypes[subtype].AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        TrackedComponentTypes[subtype] = TrackedComponentTypes[subtype].Distinct().ToList();
+                    }
+                }
+            }
+            else {
+                throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
+            }
+        }
 
         public static void RefreshTracker() {
             foreach (Type entityType in StoredEntityTypes) {
@@ -158,7 +182,7 @@ namespace Monocle {
                 }
             }
             List<Component> components = new List<Component>();
-                foreach (Entity entity in Engine.Scene.Entities) {
+            foreach (Entity entity in Engine.Scene.Entities) {
                 components.AddRange(entity.Components);
                 Type entityType = entity.GetType();
                 if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> value)) {
