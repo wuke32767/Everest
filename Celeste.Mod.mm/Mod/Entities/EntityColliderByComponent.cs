@@ -3,10 +3,22 @@ using System;
 using Microsoft.Xna.Framework;
 
 namespace Celeste.Mod.Entities {
+    /// <summary>
+    /// Allows for Collision with any type of entity in the game, similar to a PlayerCollider or PufferCollider.
+    /// Collision is done by component, as in, it will get all the components of the type and try to collide with their entities.
+    /// Performs the Action provided on collision. 
+    /// </summary>
+    /// <typeparam name="T">The specific type of Component this component should try to collide with</typeparam>
     [Tracked(false)]
     public class EntityColliderByComponent<T> : Component where T : Component {
+        /// <summary>
+        /// Provides a simple way to know the Component type of the specific Collider without Reflection
+        /// </summary>
         public readonly string componentType = typeof(T).Name;
 
+        /// <summary>
+        /// The Action invoked on Collision, with the Component collided with passed as a parameter
+        /// </summary>
         public Action<T> OnComponentAction;
 
         public Collider Collider;
