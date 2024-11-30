@@ -17,11 +17,11 @@ namespace Celeste.Mod.Entities {
             Collider = collider;
         }
 
-        public override void Added(Entity entity) {
-            if (!Engine.Scene.Tracker.IsComponentTracked<T>()) {
-                patch_Tracker.AddComponentToTracker(typeof(T));
+        public override void EntityAdded(Scene scene) {
+            if (scene.Tracker.IsComponentTracked<T>()) {
+                (scene.Tracker as patch_Tracker).AddComponentToTracker(typeof(T));
             }
-            base.Added(entity);
+            base.EntityAdded(scene);
         }
 
         public override void Update() {
