@@ -124,7 +124,7 @@ namespace Monocle {
             _temporaryAllTypes = null;
         }
 
-        public static void AddEntityToTracker(Type type, params Type[] subTypes) {
+        public void AddEntityToTracker(Type type, params Type[] subTypes) {
             StoredEntityTypes.Add(type);
             if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
                 TrackedEntityTypes[type] = new List<Type> { type };
@@ -138,13 +138,12 @@ namespace Monocle {
                     subvalue.Add(type);
                 }
             }
-            Dictionary<Type, List<Entity>> entities = Engine.Scene?.Tracker.Entities;
-            if (entities != null && !entities.ContainsKey(type)) {
-                entities[type] = Engine.Scene.Entities.Where((e) => e.GetType() == type).ToList();
+            if (!Entities.ContainsKey(type)) {
+                Entities[type] = Engine.Scene.Entities.Where((e) => e.GetType() == type).ToList();
             }
         }
 
-        public static void AddComponentToTracker(Type type, params Type[] subTypes) {
+        public void AddComponentToTracker(Type type, params Type[] subTypes) {
             StoredComponentTypes.Add(type);
             if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
                 TrackedComponentTypes[type] = new List<Type> { type };
@@ -158,13 +157,12 @@ namespace Monocle {
                     subvalue.Add(type);
                 }
             }
-            Dictionary<Type, List<Component>> components = Engine.Scene?.Tracker.Components;
-            if (components != null && !components.ContainsKey(type)) {
+            if (!Components.ContainsKey(type)) {
                 List<Component> list = new();
                 foreach (Entity entity in Engine.Scene.Entities) {
                     list.AddRange(entity.Components.Where((c) => c.GetType() == type));
                 }
-                components[type] = list;
+                Components[type] = list;
             }
         }
     }
