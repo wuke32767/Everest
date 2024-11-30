@@ -31,7 +31,7 @@ namespace Celeste.Mod.Entities {
 
         public override void EntityAdded(Scene scene) {
             if (!scene.Tracker.IsComponentTracked<T>()) {
-                (scene.Tracker as patch_Tracker).AddComponentToTracker(typeof(T));
+                patch_Tracker.AddTypeToTracker(typeof(T));
             }
             base.EntityAdded(scene);
         }
