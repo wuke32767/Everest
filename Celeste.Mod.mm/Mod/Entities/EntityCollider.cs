@@ -11,7 +11,7 @@ namespace Celeste.Mod.Entities {
 
         public Collider Collider;
 
-        public EntityCollider(Action<T> onEntityAction, Collider collider)
+        public EntityCollider(Action<T> onEntityAction, Collider collider = null)
             : base(active: true, visible: true) {
             OnEntityAction = onEntityAction;
             Collider = collider;
