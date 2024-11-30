@@ -150,19 +150,37 @@ namespace Monocle {
             } else if (!value.Contains(type)) {
                 value.Add(type);
             }
-            foreach (Type subType in subTypes) {
-                if (!TrackedComponentTypes.TryGetValue(subType, out List<Type> subvalue)) {
-                    TrackedComponentTypes[subType] = new List<Type> { type };
-                } else if (!subvalue.Contains(type)) {
-                    subvalue.Add(type);
+
+        public static void RefreshTracker() {
+            foreach (Type entityType in StoredEntityTypes) {
+                if (!Engine.Scene.Tracker.Entities.ContainsKey(entityType)) {
+                    Engine.Scene.Tracker.Entities.Add(entityType, new List<Entity>());
                 }
             }
-            if (!Components.ContainsKey(type)) {
-                List<Component> list = new();
+            List<Component> components = new List<Component>();
                 foreach (Entity entity in Engine.Scene.Entities) {
-                    list.AddRange(entity.Components.Where((c) => c.GetType() == type));
+                components.AddRange(entity.Components);
+                Type entityType = entity.GetType();
+                if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> value)) {
+                    continue;
                 }
-                Components[type] = list;
+                foreach (Type item in value) {
+                    Engine.Scene.Tracker.Entities[item].Add(entity);
+                }
+            }
+            foreach (Type componentType in StoredComponentTypes) {
+                if (!Engine.Scene.Tracker.Components.ContainsKey(componentType)) {
+                    Engine.Scene.Tracker.Components.Add(componentType, new List<Component>());
+                }
+            }
+            foreach (Component component in components) {
+                Type componentType = component.GetType();
+                if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> value)) {
+                    continue;
+                }
+                foreach (Type item in value) {
+                    Engine.Scene.Tracker.Components[item].Add(component);
+                }
             }
         }
     }
