@@ -175,21 +175,22 @@ namespace Monocle {
             }
         }
 
+        public static void RefreshTracker(Type type) {
+            if (typeof(Entity).IsAssignableFrom(type) && !Engine.Scene.Tracker.Entities.ContainsKey(type)) {
+                Engine.Scene.Tracker.Entities.Add(type, new List<Entity>());
+            }
+            else if (typeof(Component).IsAssignableFrom(type) && !Engine.Scene.Tracker.Components.ContainsKey(type)) {
+                Engine.Scene.Tracker.Components.Add(type, new List<Component>());
+            } else {
+                throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
+            }
+            RefreshTrackerLists();
+        }
+
         public static void RefreshTracker() {
             foreach (Type entityType in StoredEntityTypes) {
                 if (!Engine.Scene.Tracker.Entities.ContainsKey(entityType)) {
                     Engine.Scene.Tracker.Entities.Add(entityType, new List<Entity>());
-                }
-            }
-            List<Component> components = new List<Component>();
-            foreach (Entity entity in Engine.Scene.Entities) {
-                components.AddRange(entity.Components);
-                Type entityType = entity.GetType();
-                if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> value)) {
-                    continue;
-                }
-                foreach (Type item in value) {
-                    Engine.Scene.Tracker.Entities[item].Add(entity);
                 }
             }
             foreach (Type componentType in StoredComponentTypes) {
@@ -197,13 +198,26 @@ namespace Monocle {
                     Engine.Scene.Tracker.Components.Add(componentType, new List<Component>());
                 }
             }
-            foreach (Component component in components) {
+            RefreshTrackerLists();
+            }
+
+        private static void RefreshTrackerLists() {
+            foreach (Entity entity in Engine.Scene.Entities) {
+                foreach (Component component in entity.Components) {
                 Type componentType = component.GetType();
-                if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> value)) {
+                    if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)) {
+                        continue;
+                    }
+                    foreach (Type trackedType in componentTypes) {
+                        Engine.Scene.Tracker.Components[trackedType].Add(component);
+                    }
+                }
+                Type entityType = entity.GetType();
+                if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> entityTypes)) {
                     continue;
                 }
-                foreach (Type item in value) {
-                    Engine.Scene.Tracker.Components[item].Add(component);
+                foreach (Type trackedType in entityTypes) {
+                    Engine.Scene.Tracker.Entities[trackedType].Add(entity);
                 }
             }
         }
