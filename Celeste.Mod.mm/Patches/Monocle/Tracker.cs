@@ -137,42 +137,49 @@ namespace Monocle {
             if (typeof(Entity).IsAssignableFrom(type)) {
                 StoredEntityTypes.Add(type);
                 if (!type.IsAbstract) {
-                    if (!TrackedEntityTypes.ContainsKey(type)) {
-                        TrackedEntityTypes.Add(type, new List<Type>());
+                    if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
+                        value = new List<Type>();
+                        TrackedEntityTypes.Add(type, value);
                     }
-                    TrackedEntityTypes[type].AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
-                    TrackedEntityTypes[type] = TrackedEntityTypes[type].Distinct().ToList();
+                    value.AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    TrackedEntityTypes[type] = value.Distinct().ToList();
                 }
                 foreach (Type subtype in subtypes) {
                     if (!subtype.IsAbstract) {
-                        if (!TrackedEntityTypes.ContainsKey(subtype))
-                            TrackedEntityTypes.Add(subtype, new List<Type>());
-                        TrackedEntityTypes[subtype].AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
-                        TrackedEntityTypes[subtype] = TrackedEntityTypes[subtype].Distinct().ToList();
+                        if (!TrackedEntityTypes.TryGetValue(subtype, out List<Type> value)) {
+                            value = new List<Type>();
+                            TrackedEntityTypes.Add(subtype, value);
+                        }
+                        value.AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        TrackedEntityTypes[subtype] = value.Distinct().ToList();
                     }
                 }
             }
             else if (typeof(Component).IsAssignableFrom(type)) {
                 StoredComponentTypes.Add(type);
                 if (!type.IsAbstract) {
-                    if (!TrackedComponentTypes.ContainsKey(type)) {
-                        TrackedComponentTypes.Add(type, new List<Type>());
+                    if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
+                        value = new List<Type>();
+                        TrackedComponentTypes.Add(type, value);
                     }
-                    TrackedComponentTypes[type].AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
-                    TrackedComponentTypes[type] = TrackedComponentTypes[type].Distinct().ToList();
+                    value.AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    TrackedComponentTypes[type] = value.Distinct().ToList();
                 }
                 foreach(Type subtype in subtypes) {
                     if (!subtype.IsAbstract) {
-                        if (!TrackedComponentTypes.ContainsKey(subtype))
-                            TrackedComponentTypes.Add(subtype, new List<Type>());
-                        TrackedComponentTypes[subtype].AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
-                        TrackedComponentTypes[subtype] = TrackedComponentTypes[subtype].Distinct().ToList();
+                        if (!TrackedComponentTypes.TryGetValue(subtype, out List<Type> value)) {
+                            value = new List<Type>();
+                            TrackedComponentTypes.Add(subtype, value);
+                        }
+                        value.AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        TrackedComponentTypes[subtype] = value.Distinct().ToList();
                     }
                 }
             }
             else {
                 throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
             }
+            RefreshTracker(type);
         }
 
         public static void RefreshTracker(Type type) {
@@ -199,12 +206,12 @@ namespace Monocle {
                 }
             }
             RefreshTrackerLists();
-            }
+        }
 
         private static void RefreshTrackerLists() {
             foreach (Entity entity in Engine.Scene.Entities) {
                 foreach (Component component in entity.Components) {
-                Type componentType = component.GetType();
+                    Type componentType = component.GetType();
                     if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)) {
                         continue;
                     }
