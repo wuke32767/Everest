@@ -39,6 +39,8 @@ namespace Monocle {
         private static Type[] _temporaryAllTypes;
 
         private static Type[] GetAllTypesUncached() => FakeAssembly.GetFakeEntryAssembly().GetTypesSafe();
+
+        private bool Unrefreshed;
         
         [MonoModReplace]
         private static List<Type> GetSubclasses(Type type) {
@@ -74,6 +76,7 @@ namespace Monocle {
                     AddTypeToTracker(type, trackedAs.TrackedAsType, trackedAs.Inherited);
                 }
             }
+            (Engine.Scene.Tracker as patch_Tracker).Unrefreshed = false;
 
             // don't hold references to all the types anymore
             _temporaryAllTypes = null;
@@ -84,6 +87,7 @@ namespace Monocle {
         }
 
         public static void AddTypeToTracker(Type type, Type trackedAs = null, params Type[] subtypes) {
+            (Engine.Scene.Tracker as patch_Tracker).Unrefreshed = true;
             Type trackedAsType = trackedAs != null && trackedAs.IsAssignableFrom(type) ? trackedAs : type;
             if (typeof(Entity).IsAssignableFrom(type)) {
                 // this is an entity. copy the registered types for the target entity
@@ -133,15 +137,21 @@ namespace Monocle {
             }
             else {
                 // this is neither an entity nor a component. Help!
-                throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
+                throw new Exception("Type '" + type.Name + "' cannot be Tracked because it does not derive from Entity or Component");
             }
         }
 
         /// <summary>
         /// Ensures the current scene's tracker contains all entities of all tracked Types.
         /// Must be called if a type is added to the tracker manually and if the active scene changes.
+        /// If called back to back without a type added to the Tracker, it won't go through again, for performance.
+        /// <paramref name="force"/> will make ensure the Refresh happens, even if run back to back.
         /// </summary>
-        public void Refresh() {
+        public void Refresh(bool force = false) {
+            if (!Unrefreshed && !force) {
+                return;
+            }
+            Unrefreshed = false;
             foreach (Type entityType in StoredEntityTypes) {
                 if (!Entities.ContainsKey(entityType)) {
                     Entities.Add(entityType, new List<Entity>());
@@ -152,10 +162,6 @@ namespace Monocle {
                     Components.Add(componentType, new List<Component>());
                 }
             }
-            RefreshTrackerLists();
-        }
-
-        private void RefreshTrackerLists() {
             foreach (Entity entity in Engine.Scene.Entities) {
                 foreach (Component component in entity.Components) {
                     Type componentType = component.GetType();
