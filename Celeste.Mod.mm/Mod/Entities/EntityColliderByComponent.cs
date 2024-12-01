@@ -14,7 +14,7 @@ namespace Celeste.Mod.Entities {
         /// <summary>
         /// Provides a simple way to know the Component type of the specific Collider without Reflection
         /// </summary>
-        public readonly string componentType = typeof(T).Name;
+        public readonly Type componentType = typeof(T);
 
         /// <summary>
         /// The Action invoked on Collision, with the Component collided with passed as a parameter
