@@ -135,19 +135,6 @@ namespace Monocle {
                 // this is neither an entity nor a component. Help!
                 throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
             }
-            RefreshTracker(type);
-        }
-
-        public static void RefreshTracker(Type type) {
-            if (typeof(Entity).IsAssignableFrom(type) && !Engine.Scene.Tracker.Entities.ContainsKey(type)) {
-                Engine.Scene.Tracker.Entities.Add(type, new List<Entity>());
-            }
-            else if (typeof(Component).IsAssignableFrom(type) && !Engine.Scene.Tracker.Components.ContainsKey(type)) {
-                Engine.Scene.Tracker.Components.Add(type, new List<Component>());
-            } else {
-                throw new Exception("Type '" + type.Name + "' does not derive from Entity or Component");
-            }
-            RefreshTrackerLists();
         }
 
         public static void RefreshTracker() {
