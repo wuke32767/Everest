@@ -137,15 +137,19 @@ namespace Monocle {
             }
         }
 
-        public static void RefreshTracker() {
+        /// <summary>
+        /// Ensures the current scene's tracker contains all entities of all tracked Types.
+        /// Must be called if a type is added to the tracker manually and if the active scene changes.
+        /// </summary>
+        public void Refresh() {
             foreach (Type entityType in StoredEntityTypes) {
-                if (!Engine.Scene.Tracker.Entities.ContainsKey(entityType)) {
-                    Engine.Scene.Tracker.Entities.Add(entityType, new List<Entity>());
+                if (!Entities.ContainsKey(entityType)) {
+                    Entities.Add(entityType, new List<Entity>());
                 }
             }
             foreach (Type componentType in StoredComponentTypes) {
-                if (!Engine.Scene.Tracker.Components.ContainsKey(componentType)) {
-                    Engine.Scene.Tracker.Components.Add(componentType, new List<Component>());
+                if (!Components.ContainsKey(componentType)) {
+                    Components.Add(componentType, new List<Component>());
                 }
             }
             RefreshTrackerLists();
