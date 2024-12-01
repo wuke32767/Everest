@@ -188,7 +188,7 @@ namespace Monocle {
             else if (typeof(Component).IsAssignableFrom(type) && !Engine.Scene.Tracker.Components.ContainsKey(type)) {
                 Engine.Scene.Tracker.Components.Add(type, new List<Component>());
             } else {
-                throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
+                throw new Exception("Type '" + type.Name + "' does not derive from Entity or Component");
             }
             RefreshTrackerLists();
         }
