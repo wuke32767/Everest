@@ -146,6 +146,7 @@ namespace Monocle {
         /// Must be called if a type is added to the tracker manually and if the active scene changes.
         /// If called back to back without a type added to the Tracker, it won't go through again, for performance.
         /// <paramref name="force"/> will make ensure the Refresh happens, even if run back to back.
+        /// Due to only the active Scene's Tracker's refreshed state is changed, <paramref name="force"/> must be true if a different scene becomes active.
         /// </summary>
         public void Refresh(bool force = false) {
             if (!Unrefreshed && !force) {
