@@ -124,16 +124,11 @@ namespace Monocle {
             _temporaryAllTypes = null;
         }
 
-        public static void AddTypeToTracker(Type type, bool inheritAll) {
-            if (inheritAll) {
-                AddTypeToTracker(type, GetSubclasses(type).ToArray());
-            }
-            else {
-                AddTypeToTracker(type);
-            }
+        public static void AddTypeToTracker(Type type, Type trackedAs = null, bool inheritAll = false) {
+            AddTypeToTracker(type, trackedAs, inheritAll ? GetSubclasses(type).ToArray() : Array.Empty<Type>());
         }
 
-        public static void AddTypeToTracker(Type type, params Type[] subtypes) {
+        public static void AddTypeToTracker(Type type, Type trackedAs = null, params Type[] subtypes) {
             if (typeof(Entity).IsAssignableFrom(type)) {
                 StoredEntityTypes.Add(type);
                 if (!type.IsAbstract) {
@@ -141,7 +136,8 @@ namespace Monocle {
                         value = new List<Type>();
                         TrackedEntityTypes.Add(type, value);
                     }
-                    value.AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    value.AddRange(TrackedEntityTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
+                        ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
                     TrackedEntityTypes[type] = value.Distinct().ToList();
                 }
                 foreach (Type subtype in subtypes) {
@@ -150,7 +146,8 @@ namespace Monocle {
                             value = new List<Type>();
                             TrackedEntityTypes.Add(subtype, value);
                         }
-                        value.AddRange(TrackedEntityTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        value.AddRange(TrackedEntityTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
+                            ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
                         TrackedEntityTypes[subtype] = value.Distinct().ToList();
                     }
                 }
@@ -162,7 +159,8 @@ namespace Monocle {
                         value = new List<Type>();
                         TrackedComponentTypes.Add(type, value);
                     }
-                    value.AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                    value.AddRange(TrackedComponentTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
+                        ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
                     TrackedComponentTypes[type] = value.Distinct().ToList();
                 }
                 foreach(Type subtype in subtypes) {
@@ -171,7 +169,8 @@ namespace Monocle {
                             value = new List<Type>();
                             TrackedComponentTypes.Add(subtype, value);
                         }
-                        value.AddRange(TrackedComponentTypes.TryGetValue(type, out List<Type> list) ? list : new List<Type>());
+                        value.AddRange(TrackedComponentTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
+                            ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
                         TrackedComponentTypes[subtype] = value.Distinct().ToList();
                     }
                 }
