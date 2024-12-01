@@ -29,11 +29,20 @@ namespace Celeste.Mod.Entities {
             Collider = collider;
         }
 
+        public override void Added(Entity entity) {
+            base.Added(entity);
+            (Scene?.Tracker as patch_Tracker).Refresh();
+        }
+
         public override void EntityAdded(Scene scene) {
             if (!scene.Tracker.IsComponentTracked<T>()) {
                 patch_Tracker.AddTypeToTracker(typeof(T));
             }
             base.EntityAdded(scene);
+        }
+
+        public override void EntityAwake() {
+            (Scene.Tracker as patch_Tracker).Refresh();
         }
 
         public override void Update() {
