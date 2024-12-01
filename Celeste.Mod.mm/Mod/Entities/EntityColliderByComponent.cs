@@ -12,9 +12,9 @@ namespace Celeste.Mod.Entities {
     [Tracked(false)]
     public class EntityColliderByComponent<T> : Component where T : Component {
         /// <summary>
-        /// Provides a simple way to know the Component type of the specific Collider without Reflection
+        /// Provides a simple way to know the Component type of the specific Collider
         /// </summary>
-        public readonly Type componentType = typeof(T);
+        public Type ComponentType => typeof(T);
 
         /// <summary>
         /// The Action invoked on Collision, with the Component collided with passed as a parameter
