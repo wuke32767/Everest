@@ -155,23 +155,25 @@ namespace Monocle {
             RefreshTrackerLists();
         }
 
-        private static void RefreshTrackerLists() {
+        private void RefreshTrackerLists() {
             foreach (Entity entity in Engine.Scene.Entities) {
                 foreach (Component component in entity.Components) {
                     Type componentType = component.GetType();
-                    if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)) {
+                    if (Components[componentType].Contains(component)
+                        || !TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)) {
                         continue;
                     }
                     foreach (Type trackedType in componentTypes) {
-                        Engine.Scene.Tracker.Components[trackedType].Add(component);
+                        Components[trackedType].Add(component);
                     }
                 }
                 Type entityType = entity.GetType();
-                if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> entityTypes)) {
+                if (Entities[entityType].Contains(entity)
+                    || !TrackedEntityTypes.TryGetValue(entityType, out List<Type> entityTypes)) {
                     continue;
                 }
                 foreach (Type trackedType in entityTypes) {
-                    Engine.Scene.Tracker.Entities[trackedType].Add(entity);
+                    Entities[trackedType].Add(entity);
                 }
             }
         }
