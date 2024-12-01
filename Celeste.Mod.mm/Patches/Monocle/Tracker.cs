@@ -71,52 +71,7 @@ namespace Monocle {
                 object[] customAttributes = type.GetCustomAttributes(typeof(TrackedAsAttribute), inherit: false);
                 foreach (object customAttribute in customAttributes) {
                     TrackedAsAttribute trackedAs = customAttribute as TrackedAsAttribute;
-                    Type trackedAsType = trackedAs.TrackedAsType;
-                    bool inherited = trackedAs.Inherited;
-                    if (typeof(Entity).IsAssignableFrom(type)) {
-                        if (!type.IsAbstract) {
-                            // this is an entity. copy the registered types for the target entity
-                            if (!TrackedEntityTypes.ContainsKey(type)) {
-                                TrackedEntityTypes.Add(type, new List<Type>());
-                            }
-                            TrackedEntityTypes[type].AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                            TrackedEntityTypes[type] = TrackedEntityTypes[type].Distinct().ToList();
-                        }
-                        if (inherited) {
-                            // do the same for subclasses
-                            foreach (Type subclass in GetSubclasses(type)) {
-                                if (!subclass.IsAbstract) {
-                                    if (!TrackedEntityTypes.ContainsKey(subclass))
-                                        TrackedEntityTypes.Add(subclass, new List<Type>());
-                                    TrackedEntityTypes[subclass].AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                                    TrackedEntityTypes[subclass] = TrackedEntityTypes[subclass].Distinct().ToList();
-                                }
-                            }
-                        }
-                    } else if (typeof(Component).IsAssignableFrom(type)) {
-                        if (!type.IsAbstract) {
-                            // this is an component. copy the registered types for the target component
-                            if (!TrackedComponentTypes.ContainsKey(type)) {
-                                TrackedComponentTypes.Add(type, new List<Type>());
-                            }
-                            TrackedComponentTypes[type].AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                            TrackedComponentTypes[type] = TrackedComponentTypes[type].Distinct().ToList();
-                        }
-                        if (inherited) {
-                            // do the same for subclasses
-                            foreach (Type subclass in GetSubclasses(type)) {
-                                if (!subclass.IsAbstract) {
-                                    if (!TrackedComponentTypes.ContainsKey(subclass))
-                                        TrackedComponentTypes.Add(subclass, new List<Type>());
-                                    TrackedComponentTypes[subclass].AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                                    TrackedComponentTypes[subclass] = TrackedComponentTypes[subclass].Distinct().ToList();
-                                }
-                            }
-                        }
-                    } else {
-                        // this is neither an entity nor a component. Help!
-                        throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
-                    }
+                    AddTypeToTracker(type, trackedAs.TrackedAsType, trackedAs.Inherited);
                 }
             }
 
@@ -129,53 +84,55 @@ namespace Monocle {
         }
 
         public static void AddTypeToTracker(Type type, Type trackedAs = null, params Type[] subtypes) {
+            Type trackedAsType = trackedAs != null && trackedAs.IsAssignableFrom(type) ? trackedAs : type;
             if (typeof(Entity).IsAssignableFrom(type)) {
+                // this is an entity. copy the registered types for the target entity
                 StoredEntityTypes.Add(type);
                 if (!type.IsAbstract) {
                     if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
                         value = new List<Type>();
                         TrackedEntityTypes.Add(type, value);
                     }
-                    value.AddRange(TrackedEntityTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
-                        ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
+                    value.AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
                     TrackedEntityTypes[type] = value.Distinct().ToList();
                 }
+                // do the same for subclasses
                 foreach (Type subtype in subtypes) {
                     if (!subtype.IsAbstract) {
                         if (!TrackedEntityTypes.TryGetValue(subtype, out List<Type> value)) {
                             value = new List<Type>();
                             TrackedEntityTypes.Add(subtype, value);
                         }
-                        value.AddRange(TrackedEntityTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
-                            ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
+                        value.AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
                         TrackedEntityTypes[subtype] = value.Distinct().ToList();
                     }
                 }
             }
             else if (typeof(Component).IsAssignableFrom(type)) {
+                // this is an component. copy the registered types for the target component
                 StoredComponentTypes.Add(type);
                 if (!type.IsAbstract) {
                     if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
                         value = new List<Type>();
                         TrackedComponentTypes.Add(type, value);
                     }
-                    value.AddRange(TrackedComponentTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
-                        ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
+                    value.AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
                     TrackedComponentTypes[type] = value.Distinct().ToList();
                 }
-                foreach(Type subtype in subtypes) {
+                // do the same for subclasses
+                foreach (Type subtype in subtypes) {
                     if (!subtype.IsAbstract) {
                         if (!TrackedComponentTypes.TryGetValue(subtype, out List<Type> value)) {
                             value = new List<Type>();
                             TrackedComponentTypes.Add(subtype, value);
                         }
-                        value.AddRange(TrackedComponentTypes.TryGetValue(trackedAs != null && trackedAs.IsAssignableFrom(type)
-                            ? trackedAs : type, out List<Type> list) ? list : new List<Type>());
+                        value.AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
                         TrackedComponentTypes[subtype] = value.Distinct().ToList();
                     }
                 }
             }
             else {
+                // this is neither an entity nor a component. Help!
                 throw new Exception("Type '" + type.Name + "' cannot be TrackedAs because it does not derive from Entity or Component");
             }
             RefreshTracker(type);
