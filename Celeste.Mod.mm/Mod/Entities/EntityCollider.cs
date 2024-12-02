@@ -1,7 +1,6 @@
 ﻿using Monocle;
 using System;
 using Microsoft.Xna.Framework;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace Celeste.Mod.Entities {
     /// <summary>
