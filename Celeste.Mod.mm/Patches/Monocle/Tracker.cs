@@ -166,8 +166,8 @@ namespace Monocle {
             foreach (Entity entity in Engine.Scene.Entities) {
                 foreach (Component component in entity.Components) {
                     Type componentType = component.GetType();
-                    if (Components[componentType].Contains(component)
-                        || !TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)) {
+                    if (!TrackedComponentTypes.TryGetValue(componentType, out List<Type> componentTypes)
+                        || Components[componentType].Contains(component)) {
                         continue;
                     }
                     foreach (Type trackedType in componentTypes) {
@@ -175,8 +175,8 @@ namespace Monocle {
                     }
                 }
                 Type entityType = entity.GetType();
-                if (Entities[entityType].Contains(entity)
-                    || !TrackedEntityTypes.TryGetValue(entityType, out List<Type> entityTypes)) {
+                if (!TrackedEntityTypes.TryGetValue(entityType, out List<Type> entityTypes)
+                    || Entities[entityType].Contains(entity)) {
                     continue;
                 }
                 foreach (Type trackedType in entityTypes) {
