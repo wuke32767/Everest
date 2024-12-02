@@ -89,55 +89,32 @@ namespace Monocle {
         public static void AddTypeToTracker(Type type, Type trackedAs = null, params Type[] subtypes) {
             (Engine.Scene.Tracker as patch_Tracker).Unrefreshed = true;
             Type trackedAsType = trackedAs != null && trackedAs.IsAssignableFrom(type) ? trackedAs : type;
-            if (typeof(Entity).IsAssignableFrom(type)) {
-                // this is an entity. copy the registered types for the target entity
-                StoredEntityTypes.Add(type);
-                if (!type.IsAbstract) {
-                    if (!TrackedEntityTypes.TryGetValue(type, out List<Type> value)) {
-                        value = new List<Type>();
-                        TrackedEntityTypes.Add(type, value);
-                    }
-                    value.AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                    TrackedEntityTypes[type] = value.Distinct().ToList();
-                }
-                // do the same for subclasses
-                foreach (Type subtype in subtypes) {
-                    if (!subtype.IsAbstract) {
-                        if (!TrackedEntityTypes.TryGetValue(subtype, out List<Type> value)) {
-                            value = new List<Type>();
-                            TrackedEntityTypes.Add(subtype, value);
-                        }
-                        value.AddRange(TrackedEntityTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                        TrackedEntityTypes[subtype] = value.Distinct().ToList();
-                    }
-                }
-            }
-            else if (typeof(Component).IsAssignableFrom(type)) {
-                // this is an component. copy the registered types for the target component
-                StoredComponentTypes.Add(type);
-                if (!type.IsAbstract) {
-                    if (!TrackedComponentTypes.TryGetValue(type, out List<Type> value)) {
-                        value = new List<Type>();
-                        TrackedComponentTypes.Add(type, value);
-                    }
-                    value.AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                    TrackedComponentTypes[type] = value.Distinct().ToList();
-                }
-                // do the same for subclasses
-                foreach (Type subtype in subtypes) {
-                    if (!subtype.IsAbstract) {
-                        if (!TrackedComponentTypes.TryGetValue(subtype, out List<Type> value)) {
-                            value = new List<Type>();
-                            TrackedComponentTypes.Add(subtype, value);
-                        }
-                        value.AddRange(TrackedComponentTypes.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
-                        TrackedComponentTypes[subtype] = value.Distinct().ToList();
-                    }
-                }
-            }
-            else {
+            bool? trackedEntity = typeof(Entity).IsAssignableFrom(type) ? true : typeof(Component).IsAssignableFrom(type) ? false : null;
+            if (trackedEntity == null) {
                 // this is neither an entity nor a component. Help!
                 throw new Exception("Type '" + type.Name + "' cannot be Tracked because it does not derive from Entity or Component");
+            }
+            // copy the registered types for the target type
+            ((bool)trackedEntity ? StoredEntityTypes : StoredComponentTypes).Add(type);
+            Dictionary<Type, List<Type>> tracked = (bool)trackedEntity ? TrackedEntityTypes : TrackedComponentTypes;
+            if (!type.IsAbstract) {
+                if (!tracked.TryGetValue(type, out List<Type> value)) {
+                    value = new List<Type>();
+                    tracked.Add(type, value);
+                }
+                value.AddRange(tracked.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
+                tracked[type] = value.Distinct().ToList();
+            }
+            // do the same for subclasses
+            foreach (Type subtype in subtypes) {
+                if (trackedAsType.IsAssignableFrom(subtype) && !subtype.IsAbstract) {
+                    if (!tracked.TryGetValue(subtype, out List<Type> value)) {
+                        value = new List<Type>();
+                        tracked.Add(subtype, value);
+                    }
+                    value.AddRange(tracked.TryGetValue(trackedAsType, out List<Type> list) ? list : new List<Type>());
+                    tracked[subtype] = value.Distinct().ToList();
+                }
             }
         }
 
