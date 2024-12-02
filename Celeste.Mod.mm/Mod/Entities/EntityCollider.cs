@@ -16,7 +16,7 @@ namespace Celeste.Mod.Entities {
         public Type EntityType => typeof(T);
 
         /// <summary>
-        /// The Action invoked on Collision, with the Component collided with passed as a parameter
+        /// The Action invoked on Collision, with the Entity collided with passed as a parameter
         /// </summary>
         public Action<T> OnEntityAction;
 
