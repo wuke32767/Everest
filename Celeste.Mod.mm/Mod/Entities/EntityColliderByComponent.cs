@@ -1,6 +1,7 @@
 ﻿using Monocle;
 using System;
 using Microsoft.Xna.Framework;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace Celeste.Mod.Entities {
     /// <summary>
@@ -31,7 +32,13 @@ namespace Celeste.Mod.Entities {
 
         public override void Added(Entity entity) {
             base.Added(entity);
-            (Scene?.Tracker as patch_Tracker).Refresh();
+            //Only called if Component is added post Scene Begin and Entity Adding and Awake time.
+            if (Scene != null) {
+                if (!Scene.Tracker.IsComponentTracked<T>()) {
+                    patch_Tracker.AddTypeToTracker(typeof(T));
+                }
+                (Scene.Tracker as patch_Tracker).Refresh();
+            }
         }
 
         public override void EntityAdded(Scene scene) {
