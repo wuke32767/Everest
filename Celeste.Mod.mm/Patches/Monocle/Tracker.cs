@@ -92,7 +92,7 @@ namespace Monocle {
             bool? trackedEntity = typeof(Entity).IsAssignableFrom(type) ? true : typeof(Component).IsAssignableFrom(type) ? false : null;
             if (trackedEntity == null) {
                 // this is neither an entity nor a component. Help!
-                throw new Exception("Type '" + type.Name + "' cannot be Tracked because it does not derive from Entity or Component");
+                throw new Exception("Type '" + type.Name + "' cannot be Tracked" + (trackedAsType != type ? "As" : "") + " because it does not derive from Entity or Component");
             }
             // copy the registered types for the target type
             ((bool)trackedEntity ? StoredEntityTypes : StoredComponentTypes).Add(type);
