@@ -1,6 +1,8 @@
 ﻿using Monocle;
 using System;
 using Microsoft.Xna.Framework;
+using Mono.Cecil;
+using MonoMod.Cil;
 
 namespace Celeste.Mod.Entities {
     /// <summary>
@@ -11,7 +13,7 @@ namespace Celeste.Mod.Entities {
     public abstract class EntityCollider : Component {
         public abstract Type EntityType { get; }
 
-        public Action<Entity> OnEntityAction { get; protected set; }
+        public virtual Action<Entity> OnEntityAction => throw new NotImplementedException();
 
         public Collider Collider;
 
@@ -34,11 +36,13 @@ namespace Celeste.Mod.Entities {
         /// </summary>
         public new Action<T> OnEntityAction;
 
+        [MonoMod.NotPatchEntityColliderMakeVirtual]
+        public Action<Entity> get_OnEntityAction() => e => {
+            OnEntityAction((T) e);
+        };
+
         public EntityCollider(Action<T> onEntityAction, Collider collider = null)
             : base(active: true, visible: true) {
-            base.OnEntityAction = e => {
-                OnEntityAction((T) e);
-            };
             OnEntityAction = onEntityAction;
             Collider = collider;
         }
@@ -95,6 +99,23 @@ namespace Celeste.Mod.Entities {
                 Collider.Render(camera, Color.HotPink);
                 Entity.Collider = collider;
             }
+        }
+    }
+}
+
+namespace MonoMod {
+    /// <summary>
+    /// new and virtual property with the same name can't appears in the same type.
+    /// </summary>
+    [MonoModCustomMethodAttribute(nameof(MonoModRules.NotPatchEntityColliderMakeVirtual))]
+    class NotPatchEntityColliderMakeVirtualAttribute : Attribute { }
+
+    static partial class MonoModRules {
+
+        public static void NotPatchEntityColliderMakeVirtual(ILContext context, CustomAttribute attrib) {
+            MethodDefinition method = context.Method;
+            method.IsVirtual = true;
+            method.IsSpecialName = true;
         }
     }
 }

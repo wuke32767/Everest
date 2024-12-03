@@ -11,7 +11,7 @@ namespace Celeste.Mod.Entities {
     public abstract class EntityColliderByComponent : Component {
         public abstract Type ComponentType { get; }
 
-        public Action<Component> OnComponentAction { get; protected set; }
+        public virtual Action<Component> OnComponentAction => throw new NotImplementedException();
 
         public Collider Collider;
 
@@ -35,11 +35,13 @@ namespace Celeste.Mod.Entities {
         /// </summary>
         public new Action<T> OnComponentAction;
 
+        [MonoMod.NotPatchEntityColliderMakeVirtual]
+        public Action<Component> get_OnEntityAction() => c => {
+            OnComponentAction((T) c);
+        };
+
         public EntityColliderByComponent(Action<T> onComponentAction, Collider collider = null)
             : base(active: true, visible: true) {
-            base.OnComponentAction = c => {
-                OnComponentAction((T) c);
-            };
             OnComponentAction = onComponentAction;
             Collider = collider;
         }
