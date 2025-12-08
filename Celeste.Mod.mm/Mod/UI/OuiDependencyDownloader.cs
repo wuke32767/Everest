@@ -339,21 +339,22 @@ namespace Celeste.Mod.UI {
                 return false;
             }
 
-            if (modsToUnblacklist.Contains(match.Value)) {
-                // STOP RIGHT HERE! we already are planning to unblacklist this dependency. No need to go further!
-                return true;
-            }
+            //if (modsToUnblacklist.Contains(match.Value)) {
+            //    // STOP RIGHT HERE! we already are planning to unblacklist this dependency. No need to go further!
+            //    return true;
+            //}
 
             // this dependency will have to be unblacklisted.
             modsToUnblacklist.Add(match.Value);
 
-            // unblacklist all dependencies for this dependency. if one of them isn't unblacklistable, that doesn't matter: it will fail to load
-            // after restarting the game and it will be handled then (this case should be extremely rare anyway).
-            foreach (EverestModuleMetadata dependencyDependency in match.Key.Dependencies) {
-                if (!Everest.Loader.DependencyLoaded(dependencyDependency)) {
-                    tryUnblacklist(dependencyDependency, allModsInformation, modsToUnblacklist);
-                }
-            }
+            // note: it may not be the latest version, and there must be a newer version which would be checked later.
+            //// unblacklist all dependencies for this dependency. if one of them isn't unblacklistable, that doesn't matter: it will fail to load
+            //// after restarting the game and it will be handled then (this case should be extremely rare anyway).
+            //foreach (EverestModuleMetadata dependencyDependency in match.Key.Dependencies) {
+            //    if (!Everest.Loader.DependencyLoaded(dependencyDependency)) {
+            //        tryUnblacklist(dependencyDependency, allModsInformation, modsToUnblacklist);
+            //    }
+            //}
 
             // and we are done!
             return true;
