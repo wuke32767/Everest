@@ -329,7 +329,7 @@ namespace Celeste.Mod.UI {
 
             // let's find the most recent installed mod that has the required name.
             foreach (KeyValuePair<EverestModuleMetadata, string> candidate in allModsInformation) {
-                if (dependency.Name == candidate.Key.Name && (match.Key == null || match.Key.Version < candidate.Key.Version)) {
+                if (dependency.Name == candidate.Key.Name && (match.Key == null || match.Key.Version < candidate.Key.Version) && Everest.Loader.VersionSatisfiesDependency(dependency.Version, candidate.Key.Version)) {
                     match = candidate;
                 }
             }
