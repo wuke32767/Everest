@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -298,6 +299,30 @@ namespace Celeste.Mod.UI {
 
         private static void addTransitiveDependencies(Dictionary<string, EverestModuleMetadata> modDependencyGraph) {
             List<EverestModuleMetadata> newlyMissing = new List<EverestModuleMetadata>();
+
+            static bool UpdateMetadata(List<EverestModuleMetadata> list, EverestModuleMetadata @new) {
+                Span<EverestModuleMetadata> span = CollectionsMarshal.AsSpan(list);
+                foreach (ref EverestModuleMetadata i in span) {
+                    if (i.Name == @new.Name) {
+                        if (Everest.Loader.VersionSatisfiesDependency(@new.Version, i.Version)) {
+                            Logger.Verbose("OuiDependencyDownloader", $"{i.Name} is already missing and outdated");
+                            i = @new;
+                        } else {
+                            Logger.Verbose("OuiDependencyDownloader", $"{i.Name} is already missing");
+                        }
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            void UpdateOrAddDependencies(EverestModuleMetadata dependency, string msg) {
+                if (!UpdateMetadata(MissingDependencies, dependency) && !UpdateMetadata(newlyMissing, dependency)) {
+                    Logger.Verbose("OuiDependencyDownloader", msg);
+                    newlyMissing.Add(dependency);
+                }
+            }
+
             do {
                 Logger.Verbose("OuiDependencyDownloader", "Checking for transitive dependencies...");
 
@@ -311,11 +336,19 @@ namespace Celeste.Mod.UI {
                         foreach (EverestModuleMetadata dependency in graphEntry.Dependencies) {
                             if (Everest.Loader.DependencyLoaded(dependency)) {
                                 Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded");
-                            } else if (MissingDependencies.Any(dep => dep.Name == dependency.Name) || newlyMissing.Any(dep => dep.Name == dependency.Name)) {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is already missing");
                             } else {
-                                Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} was added to the missing dependencies!");
-                                newlyMissing.Add(dependency);
+                                UpdateOrAddDependencies(dependency, $"{dependency.Name} was added to the missing dependencies!");
+                            }
+                        }
+                        foreach (EverestModuleMetadata dependency in graphEntry.OptionalDependencies) {
+                            if (Everest.Loader.TryGetDependencyIgnoreVersion(dependency, out EverestModule loadedDep)) {
+                                if (Everest.Loader.VersionSatisfiesDependency(dependency.Version, loadedDep.Metadata.Version)) {
+                                    Logger.Verbose("OuiDependencyDownloader", $"{dependency.Name} is loaded");
+                                } else {
+                                    UpdateOrAddDependencies(dependency,  $"{dependency.Name} is loaded, but is outdated");
+                                }
+                            } else {
+                                UpdateOrAddDependencies(dependency, $"{dependency.Name} was added to the missing dependencies!");
                             }
                         }
                     }
@@ -324,6 +357,18 @@ namespace Celeste.Mod.UI {
                 MissingDependencies.AddRange(newlyMissing);
 
             } while (newlyMissing.Count > 0);
+
+            newlyMissing.Clear();
+            List<EverestModuleMetadata> currentModule = newlyMissing;
+            newlyMissing = null;
+            lock (Everest._Modules) {
+                currentModule.AddRange(Everest._Modules.Select(m => m.Metadata));
+            }
+            foreach (EverestModuleMetadata module in currentModule) {
+                foreach (EverestModuleMetadata dep in module.OptionalDependencies) {
+                    UpdateMetadata(MissingDependencies, dep);
+                }
+            }
         }
 
         private static bool tryUnblacklist(EverestModuleMetadata dependency, Dictionary<EverestModuleMetadata, string> allModsInformation, HashSet<string> modsToUnblacklist) {

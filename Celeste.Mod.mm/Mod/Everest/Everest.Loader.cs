@@ -966,6 +966,35 @@ namespace Celeste.Mod {
             }
 
             /// <summary>
+            /// Fetch an optional dependency if it is loaded.
+            /// Can be used by mods manually to f.e. activate / disable functionality.
+            /// </summary>
+            /// <param name="dep">Dependency to check for. Only Name will be checked.</param>
+            /// <param name="module">EverestModule for the dependency if found, null if not.</param>
+            /// <returns>True if the dependency has already been loaded by Everest, false otherwise.</returns>
+            public static bool TryGetDependencyIgnoreVersion(EverestModuleMetadata dep, out EverestModule module) {
+                string depName = dep.Name;
+                Version depVersion = dep.Version;
+
+                // Harcode EverestCore as an alias for the core module
+                if (depName == CoreModule.NETCoreMetaName)
+                    depName = CoreModule.Instance.Metadata.Name;
+
+                lock (_Modules) {
+                    foreach (EverestModule other in _Modules) {
+                        EverestModuleMetadata meta = other.Metadata;
+                        if (meta.Name != depName)
+                            continue;
+
+                        module = other;
+                        return true;
+                    }
+                }
+                module = null;
+                return false;
+            }
+
+            /// <summary>
             /// Checks if the given version number is "compatible" with the one required as a dependency.
             /// </summary>
             /// <param name="requiredVersion">The version required by a mod in their dependencies</param>
