@@ -200,6 +200,8 @@ namespace Celeste.Mod.UI {
                 foreach (ModUpdateInfo modToInstall in modsToInstall.Values)
                     downloadDependency(modToInstall, null);
 
+                unblacklistMods(modsToInstall.Values.Select(mod => mod.Name + ".zip").ToHashSet(), false);
+
                 foreach (ModUpdateInfo modToUpdate in modsToUpdate.Values)
                     downloadDependency(modToUpdate, modsToUpdateCurrentVersions[modToUpdate.Name]);
 
@@ -360,7 +362,7 @@ namespace Celeste.Mod.UI {
             return true;
         }
 
-        private bool unblacklistMods(HashSet<string> modFilenamesToUnblacklist) {
+        private bool unblacklistMods(HashSet<string> modFilenamesToUnblacklist, bool warn = true) {
             try {
                 // read the current blacklist file, changing nothing except for trimming lines.
                 List<string> currentBlacklist = File.ReadAllLines(Everest.Loader.PathBlacklist).Select(l => l.Trim()).ToList();
@@ -383,10 +385,12 @@ namespace Celeste.Mod.UI {
                 }
 
                 if (modsLeftToUnblacklist.Count > 0) {
-                    // some mods we are supposed to unblacklist aren't in the blacklist.txt file...?
-                    LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_UNBLACKLIST_FAILED"));
-                    foreach (string mod in modsLeftToUnblacklist) {
-                        Logger.Warn("OuiDependencyDownloader", "This mod could not be found in blacklist.txt: " + mod);
+                    if (warn) {
+                        // some mods we are supposed to unblacklist aren't in the blacklist.txt file...?
+                        LogLine(Dialog.Clean("DEPENDENCYDOWNLOADER_UNBLACKLIST_FAILED"));
+                        foreach (string mod in modsLeftToUnblacklist) {
+                            Logger.Warn("OuiDependencyDownloader", "This mod could not be found in blacklist.txt: " + mod);
+                        }
                     }
                     return false;
                 }
