@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 
 namespace Celeste {
     static class patch_BinaryPacker {
-        [MonoModIgnore]
+        [ThreadStatic]
         private static string[] stringLookup;
 
         // [ProxyFileCalls]
