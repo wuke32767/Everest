@@ -156,10 +156,9 @@ namespace Celeste {
         }
 
         private static void PoolAndLoadBanksAndEvents(List<(ModAsset, Bank)> additionalBanksMapping) {
-            while (additionalBanksMapping.Count > 0) {
-                // we can't use foreach as we remove elements while iterating
-                for (int i = additionalBanksMapping.Count - 1; i >= 0; i--) {
-                    (ModAsset asset, Bank bank) = additionalBanksMapping[i];
+            // we can't use foreach as we remove elements while iterating
+            foreach ((ModAsset asset, Bank bank) in additionalBanksMapping) {
+                while (true) {
 
                     RESULT result = bank.getLoadingState(out LOADING_STATE loadingState);
 
@@ -167,18 +166,18 @@ namespace Celeste {
                         if (result == RESULT.ERR_EVENT_ALREADY_LOADED) {
                             bank.unload(); // failed asynchronous banks should be released according to FMOD documentation
                         }
-                        additionalBanksMapping.RemoveAt(i);
+                        break;
                     } else if (loadingState != LOADING_STATE.LOADING) {
                         // assume loading was done correctly
                         lock (Everest.Content.Map) {
                             PostProcessBank(bank, asset);
                         }
-                        additionalBanksMapping.RemoveAt(i);
+                        break;
+                    } else {
+                        // wait before pooling loading state again
+                        Thread.Sleep(100);
                     }
                 }
-
-                // wait before pooling loading state again
-                Thread.Sleep(100);
             }
         }
 
@@ -224,6 +223,7 @@ namespace Celeste {
                 loadResult = system.loadBankCustom(info, flags, out bank);
             }
 
+            patch_Banks.ModCache[asset] = bank;
             if (nonBlockingLoad) {
                 return bank; // error handling and post-processing will be done in init later
             }
@@ -262,7 +262,6 @@ namespace Celeste {
             if (Everest.Content.TryGet<AssetTypeGUIDs>(asset.PathVirtual + ".guids", out ModAsset assetGUIDs)) {
                 IngestGUIDs(assetGUIDs);
             }
-            patch_Banks.ModCache[asset] = bank;
             bank.getID(out Guid id);
             cachedBankPaths[id] = $"bank:/mods/{asset.PathVirtual["Audio/".Length..]}";
         }
