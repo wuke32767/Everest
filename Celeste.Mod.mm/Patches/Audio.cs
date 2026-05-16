@@ -284,7 +284,7 @@ namespace Celeste {
                     if (indexOfSpace == -1)
                         continue;
 
-                    if (!Guid.TryParse(line[..indexOfSpace], out Guid id) || cachedPaths.ContainsKey(id))
+                    if (!Guid.TryParse(line[..indexOfSpace], out Guid id))
                         continue;
 
                     // only ingest the GUID if the corresponding event exists.
@@ -298,7 +298,7 @@ namespace Celeste {
                         continue;
 
                     _event.unloadSampleData();
-                    cachedPaths[id] = path;
+                    cachedPaths.TryAdd(id, path);
                     cachedModEvents[path] = _event;
 
                     // TODO: Ingest buses and vcas
