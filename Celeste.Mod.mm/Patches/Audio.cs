@@ -260,19 +260,23 @@ namespace Celeste {
         /// </summary>
         private static void PostProcessBank(Bank bank, ModAsset asset) {
             if (Everest.Content.TryGet<AssetTypeGUIDs>(asset.PathVirtual + ".guids", out ModAsset assetGUIDs)) {
-                IngestGUIDs(assetGUIDs);
+                IngestGUIDs(assetGUIDs, bank);
             }
             bank.getID(out Guid id);
             cachedBankPaths[id] = $"bank:/mods/{asset.PathVirtual["Audio/".Length..]}";
         }
-
+#nullable enable
+        public static void IngestGUIDs(ModAsset asset) => IngestGUIDs(asset, null);
         /// <summary>
         /// Loads an FMOD GUID table from the given asset.
         /// </summary>
-        public static void IngestGUIDs(ModAsset asset) {
+        public static void IngestGUIDs(ModAsset asset, Bank? bank) {
             if (Everest.Flags.IsHeadless) {
                 return;
             }
+            EventDescription[]? bankEventList = null;
+            bank?.getEventList(out bankEventList);
+            Dictionary<Guid, EventDescription>? bankEvent = bankEventList?.ToDictionary(x => { x.getID(out Guid guid); return guid; });
 
             Logger.Verbose("Audio.IngestGUIDs", asset.PathVirtual);
             using (Stream stream = asset.Stream)
@@ -286,13 +290,19 @@ namespace Celeste {
 
                     if (!Guid.TryParse(line[..indexOfSpace], out Guid id) || cachedPaths.ContainsKey(id))
                         continue;
-
-                    // only ingest the GUID if the corresponding event exists.
-                    if (system.getEventByID(id, out EventDescription _event) > RESULT.OK)
-                        continue;
+                    EventDescription? _event;
+                    if (bankEvent is { }) {
+                        // only ingest the GUID if it's defined in corresponding bank.
+                        if (!bankEvent.TryGetValue(id, out _event))
+                            continue;
+                    } else {
+                        // only ingest the GUID if the corresponding event exists.
+                        if (system.getEventByID(id, out _event) > RESULT.OK)
+                            continue;
+                    }
 
                     string path = line[(indexOfSpace + 1)..].ToString();
-                    if (!usedGuids.TryGetValue(path, out HashSet<Guid> used))
+                    if (!usedGuids.TryGetValue(path, out HashSet<Guid>? used))
                         usedGuids[path] = used = new HashSet<Guid>();
                     if (!used.Add(id))
                         continue;
@@ -305,7 +315,7 @@ namespace Celeste {
                 }
             }
         }
-
+#nullable restore
         public static extern void orig_ReleaseUnusedDescriptions();
         public static void ReleaseUnusedDescriptions() {
             if (Everest.Flags.IsHeadless || !CoreModule.Settings.UnloadUnusedAudio)
