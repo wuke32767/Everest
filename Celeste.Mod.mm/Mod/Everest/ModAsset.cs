@@ -46,6 +46,17 @@ namespace Celeste.Mod {
         }
 
         /// <summary>
+        /// A stream to read the asset data from.
+        /// If the stream locks internally, data will be copied to MemoryStream.
+        /// </summary>
+        public virtual Stream StreamIsolated {
+            get {
+                OpenIsolated(out Stream stream, out bool isSection);
+                return stream;
+            }
+        }
+
+        /// <summary>
         /// Can multiple streams to the same asset / source be obtained on multiple threads without any penalties?
         /// </summary>
         public virtual bool StreamAsync => true;
@@ -77,6 +88,15 @@ namespace Celeste.Mod {
         /// <param name="stream">The resulting stream.</param>
         /// <param name="isSection">Is the stream already a section (SectionOffset and SectionLength)?</param>
         protected abstract void Open(out Stream stream, out bool isSection);
+
+        /// <summary>
+        /// Open a stream to read the asset data from.
+        /// If it lock internally when reading, data will be copied into a memory stream.
+        /// </summary>
+        /// <param name="stream">The resulting stream.</param>
+        /// <param name="isSection">Is the stream already a section (SectionOffset and SectionLength)?</param>
+        protected virtual void OpenIsolated(out Stream stream, out bool isSection) =>
+            Open(out stream, out isSection);
 
         /// <summary>
         /// Deserialize the asset using a deserializer based on the AssetType (f.e. AssetTypeYaml -> YamlDotNet).
@@ -290,6 +310,11 @@ namespace Celeste.Mod {
 
         protected override void Open(out Stream stream, out bool isSection) {
             stream = Source.Open(Path);
+            isSection = false;
+        }
+
+        protected override void OpenIsolated(out Stream stream, out bool isSection) {
+            stream = Source.OpenIsolated(Path);
             isSection = false;
         }
     }

@@ -18,7 +18,7 @@ namespace Celeste {
         [MonoModReplace]
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static BinaryPacker.Element FromBinary(string filename) {
-            using FileStream fileStream = FileProxy.OpenRead(filename);
+            using FileStream fileStream = FileProxy.OpenReadIsolated(filename);
             BinaryReader binaryReader = new(fileStream);
             binaryReader.ReadString();
             string text = binaryReader.ReadString();

@@ -397,11 +397,27 @@ namespace Celeste.Mod {
             }
         }
 
+        private ZipArchiveEntry GetEntry(string path) {
+            ZipArchiveEntry entry = zip.GetEntry(path);
+            if (entry == null)
+                throw new KeyNotFoundException($"File {path} not found in archive {Path}");
+            return entry;
+        }
+
         public Stream Open(string path) {
             lock (zip) {
-                ZipArchiveEntry entry = zip.GetEntry(path);
-                if (entry == null) throw new KeyNotFoundException($"File {path} not found in archive {Path}");
-                return new SynchronizedZipEntryStream(entry);
+                return new SynchronizedZipEntryStream(GetEntry(path));
+            }
+        }
+
+        public Stream OpenIsolated(string path) {
+            lock (zip) {
+                ZipArchiveEntry entry = GetEntry(path);
+                using Stream os = entry.Open();
+                MemoryStream ms = new();
+                os.CopyTo(ms);
+                ms.Position = 0;
+                return ms;
             }
         }
 

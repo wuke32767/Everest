@@ -39,6 +39,13 @@ namespace Celeste.Mod.Helpers {
             return File.OpenRead(path);
         }
 
+        public static FileStream OpenReadIsolated(string path) {
+            if (Everest.Content.TryGet(_Modize(path), out ModAsset meta))
+                return new FileProxyStream(meta.StreamIsolated);
+
+            return File.OpenRead(path);
+        }
+
         public static byte[] ReadAllBytes(string path) {
             if (Everest.Content.TryGet(_Modize(path), out ModAsset meta))
                 return meta.Data;
