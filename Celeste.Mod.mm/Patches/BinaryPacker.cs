@@ -7,15 +7,36 @@ using System.Collections.Generic;
 using System.IO;
 using System;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 
 namespace Celeste {
     static class patch_BinaryPacker {
         [MonoModIgnore]
         private static string[] stringLookup;
 
-        [MonoModIgnore] // We don't want to change anything about the method...
-        [ProxyFileCalls] // ... except for proxying all System.IO.File.* calls to Celeste.Mod.FileProxy.*
-        public static extern BinaryPacker.Element FromBinary(string filename);
+        // [ProxyFileCalls]
+        [MonoModReplace]
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static BinaryPacker.Element FromBinary(string filename) {
+            using FileStream fileStream = FileProxy.OpenRead(filename);
+            BinaryReader binaryReader = new(fileStream);
+            binaryReader.ReadString();
+            string text = binaryReader.ReadString();
+            short num = binaryReader.ReadInt16();
+            stringLookup = new string[num];
+            for (int i = 0; i < num; i++) {
+                string cur = binaryReader.ReadString();
+                // if a interned copy exists, it must be used as string literal in mods
+                // like entity id or entitydata attribute name
+                // otherwise it may not be worthy to intern it
+                // // note that current runtime internal implementation uses lock-free read
+                // // any write should be avoided
+                stringLookup[i] = string.IsInterned(cur) ?? cur;
+            }
+            BinaryPacker.Element element = ReadElement(binaryReader);
+            element.Package = text;
+            return element;
+        }
 
         /// <remarks>
         /// EntityData will unbox some objects stored in BinaryPacker.Element and store them in a dedicated field.

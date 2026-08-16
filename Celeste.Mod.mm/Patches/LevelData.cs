@@ -50,8 +50,7 @@ namespace Celeste {
         [MonoModReplace]
         private EntityData CreateEntityData(BinaryPacker.Element entity) {
             EntityData entityData = new() {
-                // While Name comes from a lookup table, it's still duplicated between multiple .bin files.
-                Name = string.Intern(entity.Name),
+                Name = entity.Name,
                 Level = this
             };
             
@@ -90,7 +89,7 @@ namespace Celeste {
                             
                             // We'll intern keys, which, while they come from a lookup table already,
                             // still get duplicated between different .bin files.
-                            entityData.Values.Add(string.Intern(key), value);
+                            entityData.Values.Add(key, value);
                             break;
                         }
                     }

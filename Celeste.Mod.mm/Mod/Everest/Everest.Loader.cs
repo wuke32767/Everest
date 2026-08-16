@@ -579,7 +579,9 @@ namespace Celeste.Mod {
                                 genName = "Load";
 
                             } else if (split.Length == 2) {
-                                id = split[0];
+                                // for EntityData intern.
+                                // this string may not be interned, because it's created just now.
+                                id = string.Intern(split[0]);
                                 genName = split[1];
 
                             } else {
