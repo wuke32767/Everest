@@ -145,6 +145,12 @@ namespace MonoMod {
             // Post process types
             foreach (TypeDefinition type in modder.Module.Types)
                 PostProcessType(modder, type);
+
+            Mono.Collections.Generic.Collection<CustomAttribute> col = modder.Module.Assembly.CustomAttributes;
+            CustomAttribute attr = col.FirstOrDefault(a => a.AttributeType.Is(typeof(System.Runtime.CompilerServices.CompilationRelaxationsAttribute)));
+            if (attr is { }) {
+                col.Remove(attr);
+            }
         }
 
         private static void PostProcessType(MonoModder modder, TypeDefinition type) {
