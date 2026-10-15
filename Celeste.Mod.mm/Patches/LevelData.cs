@@ -53,47 +53,39 @@ namespace Celeste {
                 Name = entity.Name,
                 Level = this
             };
-            
+
             if (entity.Attributes != null) {
-                foreach ((string key, object value) in entity.Attributes) {
-                    switch (key)
-                    {
-                        case "id":
-                            entityData.ID = (int) value;
-                            break;
-                        case "x":
-                            entityData.Position.X = Convert.ToSingle(value, CultureInfo.InvariantCulture);
-                            break;
-                        case "y":
-                            entityData.Position.Y = Convert.ToSingle(value, CultureInfo.InvariantCulture);
-                            break;
-                        case "width":
-                            entityData.Width = (int) value;
-                            break;
-                        case "height":
-                            entityData.Height = (int) value;
-                            break;
-                        case "originX":
-                            entityData.Origin.X = Convert.ToSingle(value, CultureInfo.InvariantCulture);
-                            break;
-                        case "originY":
-                            entityData.Origin.Y = Convert.ToSingle(value, CultureInfo.InvariantCulture);
-                            break;
-                        default:
-                        {
-                            // We'll assume that most entities have id, x, y but not width, height, originX/Y
-                            // This means our resulting dict should have count - 3 elements in the end.
-                            // For resizable entities this makes the dict too large,
-                            // but auto-resizing from passing a capacity too small would probably make it too big anyway.
-                            entityData.Values ??= new Dictionary<string, object>(entity.Attributes.Count - 3);
-                            
-                            // We'll intern keys, which, while they come from a lookup table already,
-                            // still get duplicated between different .bin files.
-                            entityData.Values.Add(key, value);
-                            break;
-                        }
-                    }
+                var attrs = entity.Attributes;
+                object value;
+                if (attrs.TryGetValue("id", out value)) {
+                    entityData.ID = (int) value;
+                    attrs.Remove("id");
                 }
+                if (attrs.TryGetValue("x", out value)) {
+                    entityData.Position.X = Convert.ToSingle(value, CultureInfo.InvariantCulture);
+                    attrs.Remove("x");
+                }
+                if (attrs.TryGetValue("y", out value)) {
+                    entityData.Position.Y = Convert.ToSingle(value, CultureInfo.InvariantCulture);
+                    attrs.Remove("y");
+                }
+                if (attrs.TryGetValue("width", out value)) {
+                    entityData.Width = (int) value;
+                    attrs.Remove("width");
+                }
+                if (attrs.TryGetValue("height", out value)) {
+                    entityData.Height = (int) value;
+                    attrs.Remove("height");
+                }
+                if (attrs.TryGetValue("originX", out value)) {
+                    entityData.Origin.X = Convert.ToSingle(value, CultureInfo.InvariantCulture);
+                    attrs.Remove("originX");
+                }
+                if (attrs.TryGetValue("originY", out value)) {
+                    entityData.Origin.Y = Convert.ToSingle(value, CultureInfo.InvariantCulture);
+                    attrs.Remove("originY");
+                }
+                entityData.Values = attrs;
             }
 
             if (entity.Children is { Count: > 0 }) {
